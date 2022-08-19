@@ -53,6 +53,8 @@ export class AdminAuthService {
     obs.subscribe((res) => {
       this.accessToken = res.access_token;
       this.refreshToken = res.refresh_token;
+      this.http.axiosRef.defaults.headers.common['Authorization'] =
+        'Bearer ' + this.accessToken;
       this.refreshTokenBeforeExpiry(res.expires_in);
     });
     return obs;
