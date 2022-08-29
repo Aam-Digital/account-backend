@@ -50,17 +50,6 @@ RUN npm ci --no-progress --only=production
 
 COPY --from=builder /app/dist ./dist
 
-# The url of the CouchDB instance
-ENV DATABASE_URL="http://localhost:5984"
-# The user credentials which can access ALL data on the database
-ENV DATABASE_USER="demo"
-ENV DATABASE_PASSWORD="pass"
-# database name where the permissions definition document is stored
-ENV PERMISSION_DB="app"
-# A secret which is used to generate the cookies for user authentication
-ENV JWT_SECRET="jwtSecret"
-# The public key for verifying JWTs
-ENV JWT_PUBLIC_KEY="-----BEGIN PUBLIC KEY-----\n<PUBLIC_KEY>\n-----END PUBLIC KEY-----"
 # (optional) The sentry DSN in order to send the error messages to sentry
 ENV SENTRY_DSN=""
 
