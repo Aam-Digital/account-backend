@@ -16,6 +16,8 @@ async function bootstrap() {
   SwaggerModule.setup('api', app, document, {
     swaggerOptions: { persistAuthorization: true },
   });
+  // TODO add sentry
+  // TODO add tests
 
   await app.listen(3000);
 }

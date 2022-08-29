@@ -50,12 +50,15 @@ export class AdminAuthService {
           throw new UnauthorizedException();
         }),
       );
-    obs.subscribe((res) => {
-      this.accessToken = res.access_token;
-      this.refreshToken = res.refresh_token;
-      this.http.axiosRef.defaults.headers.common['Authorization'] =
-        'Bearer ' + this.accessToken;
-      this.refreshTokenBeforeExpiry(res.expires_in);
+    obs.subscribe({
+      next: (res) => {
+        this.accessToken = res.access_token;
+        this.refreshToken = res.refresh_token;
+        this.http.axiosRef.defaults.headers.common['Authorization'] =
+          'Bearer ' + this.accessToken;
+        this.refreshTokenBeforeExpiry(res.expires_in);
+      },
+      error: () => undefined,
     });
     return obs;
   }
