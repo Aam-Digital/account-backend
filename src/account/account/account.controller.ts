@@ -13,15 +13,17 @@ import { firstValueFrom, map } from 'rxjs';
 import { HttpService } from '@nestjs/axios';
 import { ForgotEmailReq } from './forgot-email-req.dto';
 import { SetEmailReq } from './set-email-req.dto';
+import { User } from '../../auth/user.dto';
 
 @Controller('account')
 export class AccountController {
   constructor(private http: HttpService) {}
+
   @UseGuards(BearerGuard)
   @ApiBearerAuth()
   @Put('set-email')
   async setEmail(@Req() req, @Body() { email }: SetEmailReq) {
-    const user = req.user;
+    const user = req.user as User;
     const url = `https://keycloak.aam-digital.com/admin/realms/${user.realm}/users/${user.sub}`;
     await firstValueFrom(
       this.http.put(url, { email: email, requiredActions: ['VERIFY_EMAIL'] }),
