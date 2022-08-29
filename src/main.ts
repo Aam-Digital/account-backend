@@ -1,6 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { SentryService } from '@ntegral/nestjs-sentry';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -16,8 +17,8 @@ async function bootstrap() {
   SwaggerModule.setup('api', app, document, {
     swaggerOptions: { persistAuthorization: true },
   });
-  // TODO add sentry
-  // TODO add tests
+
+  app.useLogger(SentryService.SentryServiceInstance());
 
   await app.listen(3000);
 }
