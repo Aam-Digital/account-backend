@@ -4,6 +4,7 @@ import { Strategy } from 'passport-http-bearer';
 import { HttpService } from '@nestjs/axios';
 import jwtDecode from 'jwt-decode';
 import { catchError, firstValueFrom, map } from 'rxjs';
+import { User } from '../user.dto';
 
 @Injectable()
 export class BearerStrategy extends PassportStrategy(Strategy) {
@@ -11,7 +12,7 @@ export class BearerStrategy extends PassportStrategy(Strategy) {
     super();
   }
 
-  validate(token): Promise<any> {
+  validate(token): Promise<User> {
     const { iss, azp } = jwtDecode<{ iss: string; azp: string }>(token);
     const realm = iss.match(/realms\/(.+)$/)[1];
     const url = iss + '/protocol/openid-connect/userinfo';

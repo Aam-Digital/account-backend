@@ -9,7 +9,9 @@ export class AdminAuthService {
   refreshToken: string;
   refreshTokenTimeout;
 
-  constructor(private http: HttpService) {}
+  constructor(private http: HttpService) {
+    // this.login('admin', 'eS1AlZ4QSKA8');
+  }
 
   /**
    * Login the admin with the given credentials.
