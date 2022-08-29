@@ -90,6 +90,6 @@ describe('AdminAuthService', () => {
 
     return expect(
       firstValueFrom(service.login('username', 'password')),
-    ).rejects.toBeInstanceOf(UnauthorizedException);
+    ).rejects.toThrow(UnauthorizedException);
   });
 });
