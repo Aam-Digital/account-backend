@@ -26,9 +26,13 @@ describe('AdminAuthService', () => {
     }).compile();
 
     service = module.get<AdminAuthService>(AdminAuthService);
+    jest.useFakeTimers();
   });
 
-  afterEach(() => jest.clearAllMocks());
+  afterEach(() => {
+    jest.clearAllMocks();
+    jest.useRealTimers();
+  });
 
   it('should be defined', () => {
     expect(service).toBeDefined();
@@ -56,7 +60,6 @@ describe('AdminAuthService', () => {
   });
 
   it('should automatically use refresh token before access token expires', async () => {
-    jest.useFakeTimers();
     jest
       .spyOn(mockHttpService, 'post')
       .mockReturnValue(of({ data: tokenResponse }));
@@ -78,7 +81,6 @@ describe('AdminAuthService', () => {
     jest.advanceTimersByTime((tokenResponse.expires_in - 60) * 1000);
 
     expect(mockHttpService.post).toHaveBeenCalledTimes(3);
-    jest.useRealTimers();
   });
 
   it('should throw unauthorized exception if request fails', () => {
