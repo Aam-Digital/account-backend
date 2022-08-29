@@ -28,6 +28,8 @@ describe('AdminAuthService', () => {
     service = module.get<AdminAuthService>(AdminAuthService);
   });
 
+  afterEach(() => jest.clearAllMocks());
+
   it('should be defined', () => {
     expect(service).toBeDefined();
   });
