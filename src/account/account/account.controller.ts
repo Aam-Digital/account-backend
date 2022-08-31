@@ -34,22 +34,23 @@ export class AccountController {
         ['VERIFY_EMAIL'],
       ),
     );
-    return 'success';
+    return { ok: true };
   }
 
-  @Post('forgot-email')
-  async forgotEmail(@Body() { email, realm, client }: ForgotEmailReq) {
+  @Post('forgot-password')
+  async forgotPassword(@Body() { email, realm, client }: ForgotEmailReq) {
     const usersUrl = `https://keycloak.aam-digital.com/admin/realms/${realm}/users`;
     const getUserUrl = `${usersUrl}?q=email:${email}`;
     const usersWithEmail = await firstValueFrom(
       this.http.get<any[]>(getUserUrl).pipe(map((res) => res.data)),
     );
-    if (usersWithEmail.length !== 1) {
+    // TODO only verified/valid accounts should allow a password reset?
+    if (usersWithEmail.length !== 1 || usersWithEmail[0].email !== email) {
       throw new BadRequestException(`Could not find user with email: ${email}`);
     }
     const user = usersWithEmail[0];
     const resetPasswordUrl = `${usersUrl}/${user.id}/execute-actions-email?client_id=${client}&redirect_uri=`;
     await firstValueFrom(this.http.put(resetPasswordUrl, ['UPDATE_PASSWORD']));
-    return 'success';
+    return { ok: true };
   }
 }

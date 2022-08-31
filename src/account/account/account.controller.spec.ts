@@ -3,6 +3,7 @@ import { AccountController } from './account.controller';
 import { HttpService } from '@nestjs/axios';
 import { User } from '../../auth/user.dto';
 import { of } from 'rxjs';
+import { BadRequestException } from '@nestjs/common';
 
 describe('AccountController', () => {
   let controller: AccountController;
@@ -48,9 +49,11 @@ describe('AccountController', () => {
 
   it('should load user and send password reset request', async () => {
     const email = 'example@mail.com';
-    mockHttpService.get.mockReturnValue(of({ data: [{ id: user.sub }] }));
+    mockHttpService.get.mockReturnValue(
+      of({ data: [{ id: user.sub, email: email }] }),
+    );
 
-    await controller.forgotEmail({
+    await controller.forgotPassword({
       email,
       realm: user.realm,
       client: user.client,
@@ -62,5 +65,20 @@ describe('AccountController', () => {
       ),
       ['UPDATE_PASSWORD'],
     );
+  });
+
+  it('should throw an error if the email does not exactly match', () => {
+    const email = 'example@mail';
+    mockHttpService.get.mockReturnValue(
+      of({ data: [{ id: user.sub, email: email + '.com' }] }),
+    );
+
+    return expect(
+      controller.forgotPassword({
+        email,
+        realm: user.realm,
+        client: user.client,
+      }),
+    ).rejects.toThrow(BadRequestException);
   });
 });
