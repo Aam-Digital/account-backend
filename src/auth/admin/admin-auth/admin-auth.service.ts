@@ -2,6 +2,7 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { catchError, map, Observable } from 'rxjs';
 import { OIDCTokenResponse } from '../oidc-token-response.dto';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class AdminAuthService {
@@ -9,7 +10,13 @@ export class AdminAuthService {
   refreshToken: string;
   refreshTokenTimeout;
 
-  constructor(private http: HttpService) {}
+  constructor(private http: HttpService, configService: ConfigService) {
+    const username = configService.get('KEYCLOAK_ADMIN');
+    const password = configService.get('KEYCLOAK_PASSWORD');
+    this.login(username, password).subscribe(() =>
+      console.log(`${username} logged in`),
+    );
+  }
 
   /**
    * Login the admin with the given credentials.

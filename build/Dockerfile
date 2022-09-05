@@ -53,5 +53,9 @@ COPY --from=builder /app/dist ./dist
 # (optional) The sentry DSN in order to send the error messages to sentry
 ENV SENTRY_DSN=""
 
+# Credentials for the master realm
+ENV KEYCLOAK_ADMIN="admin"
+ENV KEYCLOAK_PASSWORD="adminPassword"
+
 CMD ["node", "dist/main"]
 
