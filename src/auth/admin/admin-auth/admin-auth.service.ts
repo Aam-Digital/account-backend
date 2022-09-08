@@ -4,6 +4,10 @@ import { catchError, map, Observable } from 'rxjs';
 import { OIDCTokenResponse } from '../oidc-token-response.dto';
 import { ConfigService } from '@nestjs/config';
 
+/**
+ * This service authenticates against the Keycloak admin-cli.
+ * This is required in order to use the Keycloak Admin API {@link https://www.keycloak.org/docs-api/19.0.1/rest-api/index.html}.
+ */
 @Injectable()
 export class AdminAuthService {
   accessToken: string;
