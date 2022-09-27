@@ -14,10 +14,14 @@ import { HttpService } from '@nestjs/axios';
 import { ForgotEmailReq } from './forgot-email-req.dto';
 import { SetEmailReq } from './set-email-req.dto';
 import { User } from '../../auth/user.dto';
+import { ConfigService } from '@nestjs/config';
 
 @Controller('account')
 export class AccountController {
-  constructor(private http: HttpService) {}
+  private readonly keycloakUrl: string;
+  constructor(private http: HttpService, configService: ConfigService) {
+    this.keycloakUrl = configService.get('KEYCLOAK_URL');
+  }
 
   @ApiOperation({
     summary: 'Set email of a user',
@@ -31,7 +35,7 @@ export class AccountController {
   @Put('set-email')
   async setEmail(@Req() req, @Body() { email }: SetEmailReq) {
     const user = req.user as User;
-    const url = `https://keycloak.aam-digital.com/admin/realms/${user.realm}/users/${user.sub}`;
+    const url = `${this.keycloakUrl}/admin/realms/${user.realm}/users/${user.sub}`;
     await firstValueFrom(
       this.http.put(url, { email: email, requiredActions: ['VERIFY_EMAIL'] }),
     );
@@ -51,7 +55,7 @@ export class AccountController {
   })
   @Post('forgot-password')
   async forgotPassword(@Body() { email, realm, client }: ForgotEmailReq) {
-    const usersUrl = `https://keycloak.aam-digital.com/admin/realms/${realm}/users`;
+    const usersUrl = `${this.keycloakUrl}/admin/realms/${realm}/users`;
     const getUserUrl = `${usersUrl}?q=email:${email}`;
     const usersWithEmail = await firstValueFrom(
       this.http.get<any[]>(getUserUrl).pipe(map((res) => res.data)),
