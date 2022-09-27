@@ -4,6 +4,7 @@ import { firstValueFrom, of, throwError } from 'rxjs';
 import { HttpService } from '@nestjs/axios';
 import { OIDCTokenResponse } from '../oidc-token-response.dto';
 import { HttpException, UnauthorizedException } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
 
 describe('AdminAuthService', () => {
   let service: AdminAuthService;
@@ -19,6 +20,7 @@ describe('AdminAuthService', () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
+      imports: [ConfigModule],
       providers: [
         AdminAuthService,
         { provide: HttpService, useValue: mockHttpService },
@@ -26,13 +28,11 @@ describe('AdminAuthService', () => {
     }).compile();
 
     service = module.get<AdminAuthService>(AdminAuthService);
+    jest.clearAllMocks();
     jest.useFakeTimers();
   });
 
-  afterEach(() => {
-    jest.clearAllMocks();
-    jest.useRealTimers();
-  });
+  afterEach(() => jest.useRealTimers());
 
   it('should be defined', () => {
     expect(service).toBeDefined();

@@ -4,6 +4,7 @@ import { HttpService } from '@nestjs/axios';
 import { User } from '../../auth/user.dto';
 import { of } from 'rxjs';
 import { BadRequestException } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
 
 describe('AccountController', () => {
   let controller: AccountController;
@@ -19,6 +20,7 @@ describe('AccountController', () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
+      imports: [ConfigModule],
       controllers: [AccountController],
       providers: [{ provide: HttpService, useValue: mockHttpService }],
     }).compile();
