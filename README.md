@@ -21,10 +21,11 @@ or directly through npm
 In both cases the following environment variables should be defined.
 These can also be written to the `.env` file.
 
+- `CORS` domain from which requests are accepted, e.g. `https://*.aam-digital.com`. Default `*` (all domains)
 - `KEYCLOAK_URL` URL to the keycloak instance
 - `KEYCLOAK_ADMIN` name of an admin account for the `master` realm. Default `admin`
 - `KEYCLOAK_PASSWORD` password for the admin account
-- `SENTRY_DSN` (optional) the [Sentry DSN](. If defined, error messages are sent to the sentry.io application monitoring & logging service.
+- `SENTRY_DSN` (optional) the [Sentry DSN](https://docs.sentry.io/product/sentry-basics/dsn-explainer/). If defined, error messages are sent to the sentry.io application monitoring & logging service.
 
 ## Usage
 
