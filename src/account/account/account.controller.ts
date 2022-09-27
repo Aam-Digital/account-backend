@@ -8,26 +8,24 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { BearerGuard } from '../../auth/bearer/bearer.guard';
-import { ApiBearerAuth } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { firstValueFrom, map } from 'rxjs';
 import { HttpService } from '@nestjs/axios';
 import { ForgotEmailReq } from './forgot-email-req.dto';
 import { SetEmailReq } from './set-email-req.dto';
 import { User } from '../../auth/user.dto';
 
-/**
- * API for things related to user accounts in Keycloak.
- */
 @Controller('account')
 export class AccountController {
   constructor(private http: HttpService) {}
 
-  /**
-   * Set/update the email of a user.
-   * This will send a verification email to the user
-   * @param req
-   * @param email the email which should be set
-   */
+  @ApiOperation({
+    summary: 'Set email of a user',
+    description: `Set or update the email of a registered user.
+      The email is updated for the user associated with the Bearer token.
+      This sends a verification email.
+    `,
+  })
   @UseGuards(BearerGuard)
   @ApiBearerAuth()
   @Put('set-email')
@@ -46,12 +44,11 @@ export class AccountController {
     return { ok: true };
   }
 
-  /**
-   * Looks for the user with the given email and send a reset password email.
-   * @param email of a user
-   * @param realm in which the user is registered
-   * @param client through which the user authenticates
-   */
+  @ApiOperation({
+    summary: 'Send password reset email',
+    description:
+      'Looks for the user with the given email and sends a reset password email',
+  })
   @Post('forgot-password')
   async forgotPassword(@Body() { email, realm, client }: ForgotEmailReq) {
     const usersUrl = `https://keycloak.aam-digital.com/admin/realms/${realm}/users`;
