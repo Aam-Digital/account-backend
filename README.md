@@ -12,11 +12,11 @@ For more Aam Digital setup related documentation have a look at the [ndb-setup](
 
 A independent deployment can be done via docker
 
-> docker run aamdigital/account-ms:latest
+> `docker run aamdigital/account-ms:latest`
 
 or directly through npm
 
-> npm install && npm start
+> `npm install && npm start`
 
 In both cases the following environment variables should be defined.
 These can also be written to the `.env` file.
@@ -30,3 +30,11 @@ These can also be written to the `.env` file.
 
 After starting the application the API documentation can be found under `/api`.
 All available endpoints are described there.
+
+## Development
+This system is Node.js application built with the [NestJS](https://nestjs.com/) framework.
+
+To run and test this project locally:
+1. `npm install` to download and set up all dependencies
+2. `npm start` to run the application locally (see above for required environment variables)
+3. `npm test` to execute unit tests
