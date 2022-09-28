@@ -52,6 +52,10 @@ describe('AccountController', () => {
         expect.stringMatching(/\/user-id\/execute-actions-email/),
         ['VERIFY_EMAIL'],
       );
+      // looked for 'user_app' role
+      expect(mockHttp.get).toHaveBeenCalledWith(
+        expect.stringMatching(/\/roles\/user_app$/),
+      );
       // set role
       expect(mockHttp.post).toHaveBeenCalledWith(
         expect.stringMatching(/\/user-id\/role-mappings\/realm$/),

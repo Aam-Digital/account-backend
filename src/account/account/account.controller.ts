@@ -25,8 +25,16 @@ import { NewAccount } from './new-account.dto';
  */
 @Controller('account')
 export class AccountController {
-  // TODO add role to default realm setup or integrate with CASL rules
+  /**
+   * Role that is required to create a new user.
+   * TODO add role to default realm setup or integrate with CASL rules
+   */
   static readonly ACCOUNT_MANAGEMENT_ROLE = 'account_manager';
+  /**
+   * Role that is assigned to every new user.
+   */
+  static readonly DEFAULT_ROLE = 'user_app';
+
   private readonly keycloakUrl: string;
   constructor(private http: HttpService, configService: ConfigService) {
     this.keycloakUrl = configService.get('KEYCLOAK_URL');
@@ -43,6 +51,7 @@ export class AccountController {
   @UseGuards(BearerGuard)
   @Put()
   createAccount(@Req() req, @Body() { username, email }: NewAccount) {
+    // TODO allow to add roles directly
     const user = req.user as User;
     if (
       !user['_couchdb.roles'].includes(
@@ -69,7 +78,9 @@ export class AccountController {
     };
     const baseUrl = `${this.keycloakUrl}/admin/realms/${user.realm}`;
     let userId: string;
+    // create user
     return this.http.post(`${baseUrl}/users`, newUser).pipe(
+      // send verification email
       concatMap(() => this.http.get(`${baseUrl}/users?username=${username}`)),
       tap((res) => (userId = res.data[0].id)),
       concatMap(() =>
@@ -78,7 +89,10 @@ export class AccountController {
           ['VERIFY_EMAIL'],
         ),
       ),
-      concatMap(() => this.http.get(`${baseUrl}/roles/user_app`)),
+      // assign default role
+      concatMap(() =>
+        this.http.get(`${baseUrl}/roles/${AccountController.DEFAULT_ROLE}`),
+      ),
       concatMap((res) =>
         this.http.post(`${baseUrl}/users/${userId}/role-mappings/realm`, [
           res.data,
