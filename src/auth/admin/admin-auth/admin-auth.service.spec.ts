@@ -32,7 +32,10 @@ describe('AdminAuthService', () => {
     jest.useFakeTimers();
   });
 
-  afterEach(() => jest.useRealTimers());
+  afterEach(() => {
+    jest.clearAllMocks();
+    jest.useRealTimers();
+  });
 
   it('should be defined', () => {
     expect(service).toBeDefined();
