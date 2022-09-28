@@ -3,7 +3,7 @@ import { AccountController } from './account.controller';
 import { HttpService } from '@nestjs/axios';
 import { User } from '../../auth/user.dto';
 import { of } from 'rxjs';
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, UnauthorizedException } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 
 describe('AccountController', () => {
@@ -17,6 +17,7 @@ describe('AccountController', () => {
     sub: 'user-id',
     realm: 'ndb-dev',
     client: 'app',
+    ['_couchdb.roles']: [AccountController.ACCOUNT_MANAGEMENT_ROLE],
   };
 
   beforeEach(async () => {
@@ -58,6 +59,23 @@ describe('AccountController', () => {
       );
       done();
     });
+  });
+
+  it('should not allow to create account if requried role is missing', (done) => {
+    const otherUser = Object.assign({}, user);
+    otherUser['_couchdb.roles'] = [];
+
+    controller
+      .createAccount(
+        { user: otherUser },
+        { username: 'username', email: 'some-email' },
+      )
+      .subscribe({
+        error: (err) => {
+          expect(err).toBeInstanceOf(UnauthorizedException);
+          done();
+        },
+      });
   });
 
   it('should set the email and send a verification request', async () => {

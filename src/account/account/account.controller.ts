@@ -5,11 +5,12 @@ import {
   Post,
   Put,
   Req,
+  UnauthorizedException,
   UseGuards,
 } from '@nestjs/common';
 import { BearerGuard } from '../../auth/bearer/bearer.guard';
 import { ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
-import { concatMap, firstValueFrom, map, tap } from 'rxjs';
+import { concatMap, firstValueFrom, map, tap, throwError } from 'rxjs';
 import { HttpService } from '@nestjs/axios';
 import { ForgotEmailReq } from './forgot-email-req.dto';
 import { SetEmailReq } from './set-email-req.dto';
@@ -24,6 +25,8 @@ import { NewAccount } from './new-account.dto';
  */
 @Controller('account')
 export class AccountController {
+  // TODO add role to default realm setup or integrate with CASL rules
+  static readonly ACCOUNT_MANAGEMENT_ROLE = 'account_manager';
   private readonly keycloakUrl: string;
   constructor(private http: HttpService, configService: ConfigService) {
     this.keycloakUrl = configService.get('KEYCLOAK_URL');
@@ -41,6 +44,13 @@ export class AccountController {
   @Put()
   createAccount(@Req() req, @Body() { username, email }: NewAccount) {
     const user = req.user as User;
+    if (
+      !user['_couchdb.roles'].includes(
+        AccountController.ACCOUNT_MANAGEMENT_ROLE,
+      )
+    ) {
+      return throwError(() => new UnauthorizedException('missing permissions'));
+    }
     // create user
     const newUser = {
       username,
