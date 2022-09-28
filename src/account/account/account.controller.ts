@@ -15,12 +15,62 @@ import { ForgotEmailReq } from './forgot-email-req.dto';
 import { SetEmailReq } from './set-email-req.dto';
 import { User } from '../../auth/user.dto';
 import { ConfigService } from '@nestjs/config';
+import { NewAccount } from './new-account.dto';
 
 @Controller('account')
 export class AccountController {
   private readonly keycloakUrl: string;
   constructor(private http: HttpService, configService: ConfigService) {
     this.keycloakUrl = configService.get('KEYCLOAK_URL');
+  }
+
+  @Put()
+  async createAccount(@Body() { username, email }: NewAccount) {
+    // todo take from user object
+    const realm = 'dev';
+    const client = 'app';
+    const user = {
+      username,
+      attributes: { exact_username: username },
+      email: email,
+      requiredActions: ['VERIFY_EMAIL'],
+      enabled: true,
+      credentials: [
+        {
+          type: 'password',
+          value: 'tmpPass',
+          temporary: true,
+        },
+      ],
+    };
+    await firstValueFrom(
+      this.http.post(`${this.keycloakUrl}/admin/realms/${realm}/users`, user),
+    );
+    const keycloakUser = await firstValueFrom(
+      this.http
+        .get(
+          `${this.keycloakUrl}/admin/realms/${realm}/users?username=${username}`,
+        )
+        .pipe(map((res) => res.data)),
+    );
+    await firstValueFrom(
+      this.http.put(
+        `${this.keycloakUrl}/admin/realms/${realm}/users/${keycloakUser[0].id}/execute-actions-email?client_id=${client}&redirect_uri=`,
+        ['VERIFY_EMAIL'],
+      ),
+    );
+    const role = await firstValueFrom(
+      this.http
+        .get(`${this.keycloakUrl}/admin/realms/${realm}/roles/user_app`)
+        .pipe(map((res) => res.data)),
+    );
+    await firstValueFrom(
+      this.http.post(
+        `${this.keycloakUrl}/admin/realms/${realm}/users/${keycloakUser[0].id}/role-mappings/realm`,
+        [role],
+      ),
+    );
+    return { ok: true };
   }
 
   @ApiOperation({
