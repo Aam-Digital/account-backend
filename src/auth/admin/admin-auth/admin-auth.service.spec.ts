@@ -19,6 +19,7 @@ describe('AdminAuthService', () => {
   };
 
   beforeEach(async () => {
+    jest.useFakeTimers();
     const module: TestingModule = await Test.createTestingModule({
       imports: [ConfigModule],
       providers: [
@@ -29,13 +30,9 @@ describe('AdminAuthService', () => {
 
     service = module.get<AdminAuthService>(AdminAuthService);
     jest.clearAllMocks();
-    jest.useFakeTimers();
   });
 
-  afterEach(() => {
-    jest.clearAllMocks();
-    jest.useRealTimers();
-  });
+  afterEach(() => jest.useRealTimers());
 
   it('should be defined', () => {
     expect(service).toBeDefined();

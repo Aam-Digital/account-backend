@@ -33,7 +33,7 @@ After starting the application the API documentation can be found under `/api`.
 All available endpoints are described there.
 
 ## Development
-This system is Node.js application built with the [NestJS](https://nestjs.com/) framework.
+This system is a Node.js application built with the [NestJS](https://nestjs.com/) framework.
 
 To run and test this project locally:
 1. `npm install` to download and set up all dependencies
