@@ -8,23 +8,34 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { BearerGuard } from '../../auth/bearer/bearer.guard';
-import { ApiBearerAuth } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { firstValueFrom, map } from 'rxjs';
 import { HttpService } from '@nestjs/axios';
 import { ForgotEmailReq } from './forgot-email-req.dto';
 import { SetEmailReq } from './set-email-req.dto';
 import { User } from '../../auth/user.dto';
+import { ConfigService } from '@nestjs/config';
 
 @Controller('account')
 export class AccountController {
-  constructor(private http: HttpService) {}
+  private readonly keycloakUrl: string;
+  constructor(private http: HttpService, configService: ConfigService) {
+    this.keycloakUrl = configService.get('KEYCLOAK_URL');
+  }
 
+  @ApiOperation({
+    summary: 'Set email of a user',
+    description: `Set or update the email of a registered user.
+      The email is updated for the user associated with the Bearer token.
+      This sends a verification email.
+    `,
+  })
   @UseGuards(BearerGuard)
   @ApiBearerAuth()
   @Put('set-email')
   async setEmail(@Req() req, @Body() { email }: SetEmailReq) {
     const user = req.user as User;
-    const url = `https://keycloak.aam-digital.com/admin/realms/${user.realm}/users/${user.sub}`;
+    const url = `${this.keycloakUrl}/admin/realms/${user.realm}/users/${user.sub}`;
     await firstValueFrom(
       this.http.put(url, { email: email, requiredActions: ['VERIFY_EMAIL'] }),
     );
@@ -37,9 +48,14 @@ export class AccountController {
     return { ok: true };
   }
 
+  @ApiOperation({
+    summary: 'Send password reset email',
+    description:
+      'Looks for the user with the given email and sends a reset password email',
+  })
   @Post('forgot-password')
   async forgotPassword(@Body() { email, realm, client }: ForgotEmailReq) {
-    const usersUrl = `https://keycloak.aam-digital.com/admin/realms/${realm}/users`;
+    const usersUrl = `${this.keycloakUrl}/admin/realms/${realm}/users`;
     const getUserUrl = `${usersUrl}?q=email:${email}`;
     const usersWithEmail = await firstValueFrom(
       this.http.get<any[]>(getUserUrl).pipe(map((res) => res.data)),

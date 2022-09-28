@@ -4,13 +4,19 @@ import { catchError, map, Observable } from 'rxjs';
 import { OIDCTokenResponse } from '../oidc-token-response.dto';
 import { ConfigService } from '@nestjs/config';
 
+/**
+ * This service authenticates against the Keycloak admin-cli.
+ * This is required in order to use the Keycloak Admin API {@link https://www.keycloak.org/docs-api/19.0.1/rest-api/index.html}.
+ */
 @Injectable()
 export class AdminAuthService {
+  private readonly keycloakUrl: string;
   accessToken: string;
   refreshToken: string;
   refreshTokenTimeout;
 
   constructor(private http: HttpService, configService: ConfigService) {
+    this.keycloakUrl = configService.get('KEYCLOAK_URL');
     const username = configService.get('KEYCLOAK_ADMIN');
     const password = configService.get('KEYCLOAK_PASSWORD');
     this.login(username, password).subscribe(() =>
@@ -48,7 +54,7 @@ export class AdminAuthService {
     body.set('client_id', 'admin-cli');
     const obs = this.http
       .post<OIDCTokenResponse>(
-        'https://keycloak.aam-digital.com/realms/master/protocol/openid-connect/token',
+        `${this.keycloakUrl}/realms/master/protocol/openid-connect/token`,
         body.toString(),
       )
       .pipe(

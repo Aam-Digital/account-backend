@@ -21,7 +21,7 @@ describe('BearerStrategy', () => {
     preferred_username: 'demo',
     given_name: '',
     family_name: '',
-    email: 'simon@aam-digital.com',
+    email: 'my@email.com',
     username: 'demo',
   };
   let strategy: BearerStrategy;

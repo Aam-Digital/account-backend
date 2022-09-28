@@ -6,8 +6,7 @@ import { SentryService } from '@ntegral/nestjs-sentry';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // TODO restrict these cors settings, maybe through config
-  app.enableCors();
+  app.enableCors({ origin: process.env.CORS });
 
   // SwaggerUI setup see https://docs.nestjs.com/openapi/introduction#bootstrap
   const config = new DocumentBuilder()
