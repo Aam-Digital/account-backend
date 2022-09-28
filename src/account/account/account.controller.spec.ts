@@ -8,9 +8,10 @@ import { ConfigModule } from '@nestjs/config';
 
 describe('AccountController', () => {
   let controller: AccountController;
-  const mockHttpService = {
+  const mockHttp = {
     put: jest.fn().mockReturnValue(of(undefined)),
     get: jest.fn().mockReturnValue(of(undefined)),
+    post: jest.fn().mockReturnValue(of(undefined)),
   };
   const user: User = {
     sub: 'user-id',
@@ -22,7 +23,7 @@ describe('AccountController', () => {
     const module: TestingModule = await Test.createTestingModule({
       imports: [ConfigModule],
       controllers: [AccountController],
-      providers: [{ provide: HttpService, useValue: mockHttpService }],
+      providers: [{ provide: HttpService, useValue: mockHttp }],
     }).compile();
 
     controller = module.get<AccountController>(AccountController);
@@ -32,18 +33,45 @@ describe('AccountController', () => {
     expect(controller).toBeDefined();
   });
 
+  it('should create a new account and send a verification mail', (done) => {
+    mockHttp.get.mockImplementation((url: string) =>
+      of({ data: url.includes('users') ? [{ id: 'user-id' }] : 'my-role' }),
+    );
+    const email = 'my@email.com';
+    const username = 'my-name';
+
+    controller.createAccount({ user }, { username, email }).subscribe(() => {
+      // created user
+      expect(mockHttp.post).toHaveBeenCalledWith(
+        expect.stringMatching(/\/ndb-dev\/users$/),
+        expect.objectContaining({ username, email }),
+      );
+      // sent verification email
+      expect(mockHttp.put).toHaveBeenCalledWith(
+        expect.stringMatching(/\/user-id\/execute-actions-email/),
+        ['VERIFY_EMAIL'],
+      );
+      // set role
+      expect(mockHttp.post).toHaveBeenCalledWith(
+        expect.stringMatching(/\/user-id\/role-mappings\/realm$/),
+        ['my-role'],
+      );
+      done();
+    });
+  });
+
   it('should set the email and send a verification request', async () => {
     const email = 'example@mail.com';
     const prom = controller.setEmail({ user }, { email });
 
-    expect(mockHttpService.put).toHaveBeenLastCalledWith(
+    expect(mockHttp.put).toHaveBeenLastCalledWith(
       expect.stringContaining(`admin/realms/${user.realm}/users/${user.sub}`),
       { email, requiredActions: ['VERIFY_EMAIL'] },
     );
 
     await prom;
 
-    expect(mockHttpService.put).toHaveBeenLastCalledWith(
+    expect(mockHttp.put).toHaveBeenLastCalledWith(
       expect.stringContaining(`execute-actions-email?client_id=${user.client}`),
       ['VERIFY_EMAIL'],
     );
@@ -51,7 +79,7 @@ describe('AccountController', () => {
 
   it('should load user and send password reset request', async () => {
     const email = 'example@mail.com';
-    mockHttpService.get.mockReturnValue(
+    mockHttp.get.mockReturnValue(
       of({ data: [{ id: user.sub, email: email }] }),
     );
 
@@ -61,7 +89,7 @@ describe('AccountController', () => {
       client: user.client,
     });
 
-    expect(mockHttpService.put).toHaveBeenCalledWith(
+    expect(mockHttp.put).toHaveBeenCalledWith(
       expect.stringContaining(
         `${user.realm}/users/${user.sub}/execute-actions-email?client_id=${user.client}&redirect_uri=`,
       ),
@@ -71,7 +99,7 @@ describe('AccountController', () => {
 
   it('should throw an error if the email does not exactly match', () => {
     const email = 'example@mail';
-    mockHttpService.get.mockReturnValue(
+    mockHttp.get.mockReturnValue(
       of({ data: [{ id: user.sub, email: email + '.com' }] }),
     );
 

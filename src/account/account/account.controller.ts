@@ -9,7 +9,7 @@ import {
 } from '@nestjs/common';
 import { BearerGuard } from '../../auth/bearer/bearer.guard';
 import { ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
-import { firstValueFrom, map } from 'rxjs';
+import { concatMap, firstValueFrom, map, tap } from 'rxjs';
 import { HttpService } from '@nestjs/axios';
 import { ForgotEmailReq } from './forgot-email-req.dto';
 import { SetEmailReq } from './set-email-req.dto';
@@ -39,10 +39,8 @@ export class AccountController {
   @ApiBearerAuth()
   @UseGuards(BearerGuard)
   @Put()
-  async createAccount(
-    @Req() { user }: { user: User },
-    @Body() { username, email }: NewAccount,
-  ) {
+  createAccount(@Req() req, @Body() { username, email }: NewAccount) {
+    const user = req.user as User;
     // create user
     const newUser = {
       username,
@@ -59,33 +57,25 @@ export class AccountController {
         },
       ],
     };
-    const baseUrl = `${this.keycloakUrl}/admin/realms/${user.realm}/users`;
-    await firstValueFrom(this.http.post(`${baseUrl}/users`, newUser));
-
-    // send account verification email
-    const keycloakUser = await firstValueFrom(
-      this.http
-        .get(`${baseUrl}/users?username=${username}`)
-        .pipe(map((res) => res.data[0])),
-    );
-    await firstValueFrom(
-      this.http.put(
-        `${baseUrl}/users/${keycloakUser.id}/execute-actions-email?client_id=${user.client}&redirect_uri=`,
-        ['VERIFY_EMAIL'],
+    const baseUrl = `${this.keycloakUrl}/admin/realms/${user.realm}`;
+    let userId: string;
+    return this.http.post(`${baseUrl}/users`, newUser).pipe(
+      concatMap(() => this.http.get(`${baseUrl}/users?username=${username}`)),
+      tap((res) => (userId = res.data[0].id)),
+      concatMap(() =>
+        this.http.put(
+          `${baseUrl}/users/${userId}/execute-actions-email?client_id=${user.client}&redirect_uri=`,
+          ['VERIFY_EMAIL'],
+        ),
       ),
-    );
-
-    // assign default `user_app` role
-    const role = await firstValueFrom(
-      this.http.get(`${baseUrl}/roles/user_app`).pipe(map((res) => res.data)),
-    );
-    await firstValueFrom(
-      this.http.post(
-        `${baseUrl}/users/${keycloakUser.id}/role-mappings/realm`,
-        [role],
+      concatMap(() => this.http.get(`${baseUrl}/roles/user_app`)),
+      concatMap((res) =>
+        this.http.post(`${baseUrl}/users/${userId}/role-mappings/realm`, [
+          res.data,
+        ]),
       ),
+      map(() => ({ ok: true })),
     );
-    return { ok: true };
   }
 
   @ApiOperation({
