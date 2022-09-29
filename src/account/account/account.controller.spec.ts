@@ -40,7 +40,7 @@ describe('AccountController', () => {
     );
     const email = 'my@email.com';
     const username = 'my-name';
-    const roles = ['user_app'];
+    const roles = ['user_app', 'admin_app'];
 
     controller
       .createAccount({ user }, { username, email, roles })
@@ -55,14 +55,17 @@ describe('AccountController', () => {
           expect.stringMatching(/\/user-id\/execute-actions-email/),
           ['VERIFY_EMAIL'],
         );
-        // looked for 'user_app' role
+        // looked for roles
         expect(mockHttp.get).toHaveBeenCalledWith(
           expect.stringMatching(/\/roles\/user_app$/),
         );
-        // set role
+        expect(mockHttp.get).toHaveBeenCalledWith(
+          expect.stringMatching(/\/roles\/admin_app$/),
+        );
+        // set roles
         expect(mockHttp.post).toHaveBeenCalledWith(
           expect.stringMatching(/\/user-id\/role-mappings\/realm$/),
-          ['my-role'],
+          ['my-role', 'my-role'],
         );
         done();
       });

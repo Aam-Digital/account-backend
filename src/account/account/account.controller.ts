@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Body,
   Controller,
+  HttpException,
   Post,
   Put,
   Req,
@@ -10,7 +11,15 @@ import {
 } from '@nestjs/common';
 import { BearerGuard } from '../../auth/bearer/bearer.guard';
 import { ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
-import { concatMap, firstValueFrom, map, tap, throwError } from 'rxjs';
+import {
+  catchError,
+  concatMap,
+  firstValueFrom,
+  forkJoin,
+  map,
+  tap,
+  throwError,
+} from 'rxjs';
 import { HttpService } from '@nestjs/axios';
 import { ForgotEmailReq } from './forgot-email-req.dto';
 import { SetEmailReq } from './set-email-req.dto';
@@ -31,10 +40,6 @@ export class AccountController {
    * TODO add role to default realm setup or integrate with CASL rules
    */
   static readonly ACCOUNT_MANAGEMENT_ROLE = 'account_manager';
-  /**
-   * Role that is assigned to every new user.
-   */
-  static readonly DEFAULT_ROLE = 'user_app';
 
   private readonly keycloakUrl: string;
   constructor(private http: HttpService, configService: ConfigService) {
@@ -51,8 +56,7 @@ export class AccountController {
   @ApiBearerAuth()
   @UseGuards(BearerGuard)
   @Put()
-  createAccount(@Req() req, @Body() { username, email }: NewAccount) {
-    // TODO allow to add roles directly
+  createAccount(@Req() req, @Body() { username, email, roles }: NewAccount) {
     const user = req.user as User;
     if (
       !user['_couchdb.roles'].includes(
@@ -76,15 +80,24 @@ export class AccountController {
           ['VERIFY_EMAIL'],
         ),
       ),
-      // assign default role
+      // assign roles
       concatMap(() =>
-        this.http.get(`${baseUrl}/roles/${AccountController.DEFAULT_ROLE}`),
+        forkJoin(
+          roles.map((role) => this.http.get(`${baseUrl}/roles/${role}`)),
+        ),
       ),
       concatMap((res) =>
-        this.http.post(`${baseUrl}/users/${userId}/role-mappings/realm`, [
-          res.data,
-        ]),
+        this.http.post(
+          `${baseUrl}/users/${userId}/role-mappings/realm`,
+          res.map((r) => r.data),
+        ),
       ),
+      catchError((err) => {
+        throw new HttpException(
+          err.response.data.errorMessage,
+          err.response.status,
+        );
+      }),
       map(() => ({ ok: true })),
     );
   }
