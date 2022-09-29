@@ -55,7 +55,7 @@ export class AccountController {
     }
     let userId: string;
     return this.keycloak.createUser(realm, username, email).pipe(
-      concatMap(() => this.keycloak.findUserBy(realm, { username })),
+      concatMap(() => this.keycloak.findUsersBy(realm, { username })),
       tap((res) => (userId = res[0].id)),
       concatMap(() =>
         this.keycloak.sendEmail(realm, client, userId, 'VERIFY_EMAIL'),
@@ -103,7 +103,7 @@ export class AccountController {
   })
   @Post('forgot-password')
   async forgotPassword(@Body() { email, realm, client }: ForgotEmailReq) {
-    return this.keycloak.findUserBy(realm, { email }).pipe(
+    return this.keycloak.findUsersBy(realm, { email }).pipe(
       map((users) => {
         // TODO only verified/valid accounts should allow a password reset?
         if (users.length !== 1 || users[0].email !== email) {
