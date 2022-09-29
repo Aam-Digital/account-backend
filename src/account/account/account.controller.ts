@@ -17,6 +17,7 @@ import { SetEmailReq } from './set-email-req.dto';
 import { User } from '../../auth/user.dto';
 import { ConfigService } from '@nestjs/config';
 import { NewAccount } from './new-account.dto';
+import { KeycloakUser } from './keycloak-user';
 
 /**
  * Endpoints to perform user account related tasks.
@@ -61,21 +62,7 @@ export class AccountController {
       return throwError(() => new UnauthorizedException('missing permissions'));
     }
     // create user
-    const newUser = {
-      username,
-      attributes: { exact_username: username },
-      email,
-      requiredActions: ['VERIFY_EMAIL'],
-      enabled: true,
-      credentials: [
-        {
-          type: 'password',
-          value: 'tmpPass',
-          // this triggers the set new password flow
-          temporary: true,
-        },
-      ],
-    };
+    const newUser = new KeycloakUser(username, email);
     const baseUrl = `${this.keycloakUrl}/admin/realms/${user.realm}`;
     let userId: string;
     // create user

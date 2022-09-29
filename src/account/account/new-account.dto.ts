@@ -8,4 +8,9 @@ export class NewAccount {
       'email for the new account to which a activate-account message will be sent',
   })
   email: string;
+  @ApiProperty({
+    description:
+      'Roles which should be assigned to the user. They have to exist already.',
+  })
+  roles: string[];
 }

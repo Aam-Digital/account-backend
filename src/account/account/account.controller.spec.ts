@@ -34,45 +34,48 @@ describe('AccountController', () => {
     expect(controller).toBeDefined();
   });
 
-  it('should create a new account and send a verification mail', (done) => {
+  it('should create a new account with provided roles and send a verification mail', (done) => {
     mockHttp.get.mockImplementation((url: string) =>
       of({ data: url.includes('users') ? [{ id: 'user-id' }] : 'my-role' }),
     );
     const email = 'my@email.com';
     const username = 'my-name';
+    const roles = ['user_app'];
 
-    controller.createAccount({ user }, { username, email }).subscribe(() => {
-      // created user
-      expect(mockHttp.post).toHaveBeenCalledWith(
-        expect.stringMatching(/\/ndb-dev\/users$/),
-        expect.objectContaining({ username, email }),
-      );
-      // sent verification email
-      expect(mockHttp.put).toHaveBeenCalledWith(
-        expect.stringMatching(/\/user-id\/execute-actions-email/),
-        ['VERIFY_EMAIL'],
-      );
-      // looked for 'user_app' role
-      expect(mockHttp.get).toHaveBeenCalledWith(
-        expect.stringMatching(/\/roles\/user_app$/),
-      );
-      // set role
-      expect(mockHttp.post).toHaveBeenCalledWith(
-        expect.stringMatching(/\/user-id\/role-mappings\/realm$/),
-        ['my-role'],
-      );
-      done();
-    });
+    controller
+      .createAccount({ user }, { username, email, roles })
+      .subscribe(() => {
+        // created user
+        expect(mockHttp.post).toHaveBeenCalledWith(
+          expect.stringMatching(/\/ndb-dev\/users$/),
+          expect.objectContaining({ username, email }),
+        );
+        // sent verification email
+        expect(mockHttp.put).toHaveBeenCalledWith(
+          expect.stringMatching(/\/user-id\/execute-actions-email/),
+          ['VERIFY_EMAIL'],
+        );
+        // looked for 'user_app' role
+        expect(mockHttp.get).toHaveBeenCalledWith(
+          expect.stringMatching(/\/roles\/user_app$/),
+        );
+        // set role
+        expect(mockHttp.post).toHaveBeenCalledWith(
+          expect.stringMatching(/\/user-id\/role-mappings\/realm$/),
+          ['my-role'],
+        );
+        done();
+      });
   });
 
-  it('should not allow to create account if requried role is missing', (done) => {
+  it('should not allow to create account if required role is missing', (done) => {
     const otherUser = Object.assign({}, user);
     otherUser['_couchdb.roles'] = [];
 
     controller
       .createAccount(
         { user: otherUser },
-        { username: 'username', email: 'some-email' },
+        { username: 'username', email: 'some-email', roles: [] },
       )
       .subscribe({
         error: (err) => {
