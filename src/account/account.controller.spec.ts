@@ -5,13 +5,14 @@ import { User } from '../auth/user.dto';
 import { of } from 'rxjs';
 import { BadRequestException, UnauthorizedException } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { KeycloakService } from './keycloak.service';
 
 describe('AccountController', () => {
   let controller: AccountController;
   const mockHttp = {
-    put: jest.fn().mockReturnValue(of(undefined)),
-    get: jest.fn().mockReturnValue(of(undefined)),
-    post: jest.fn().mockReturnValue(of(undefined)),
+    put: jest.fn().mockReturnValue(of({ data: undefined })),
+    get: jest.fn().mockReturnValue(of({ data: undefined })),
+    post: jest.fn().mockReturnValue(of({ date: undefined })),
   };
   const user: User = {
     sub: 'user-id',
@@ -24,10 +25,14 @@ describe('AccountController', () => {
     const module: TestingModule = await Test.createTestingModule({
       imports: [ConfigModule],
       controllers: [AccountController],
-      providers: [{ provide: HttpService, useValue: mockHttp }],
+      providers: [
+        KeycloakService,
+        { provide: HttpService, useValue: mockHttp },
+      ],
     }).compile();
 
     controller = module.get<AccountController>(AccountController);
+    jest.clearAllMocks();
   });
 
   it('should be defined', () => {
@@ -88,55 +93,67 @@ describe('AccountController', () => {
       });
   });
 
-  it('should set the email and send a verification request', async () => {
+  it('should set the email and send a verification request', (done) => {
     const email = 'example@mail.com';
-    const prom = controller.setEmail({ user }, { email });
-
-    expect(mockHttp.put).toHaveBeenLastCalledWith(
-      expect.stringContaining(`admin/realms/${user.realm}/users/${user.sub}`),
-      { email, requiredActions: ['VERIFY_EMAIL'] },
-    );
-
-    await prom;
-
-    expect(mockHttp.put).toHaveBeenLastCalledWith(
-      expect.stringContaining(`execute-actions-email?client_id=${user.client}`),
-      ['VERIFY_EMAIL'],
-    );
+    controller.setEmail({ user }, { email }).subscribe(() => {
+      expect(mockHttp.put.mock.calls).toEqual([
+        [
+          expect.stringContaining(
+            `admin/realms/${user.realm}/users/${user.sub}`,
+          ),
+          { email, requiredActions: ['VERIFY_EMAIL'] },
+        ],
+        [
+          expect.stringContaining(
+            `execute-actions-email?client_id=${user.client}`,
+          ),
+          ['VERIFY_EMAIL'],
+        ],
+      ]);
+      done();
+    });
   });
 
-  it('should load user and send password reset request', async () => {
+  it('should load user and send password reset request', (done) => {
     const email = 'example@mail.com';
     mockHttp.get.mockReturnValue(
       of({ data: [{ id: user.sub, email: email }] }),
     );
 
-    await controller.forgotPassword({
-      email,
-      realm: user.realm,
-      client: user.client,
-    });
-
-    expect(mockHttp.put).toHaveBeenCalledWith(
-      expect.stringContaining(
-        `${user.realm}/users/${user.sub}/execute-actions-email?client_id=${user.client}&redirect_uri=`,
-      ),
-      ['UPDATE_PASSWORD'],
-    );
+    controller
+      .forgotPassword({
+        email,
+        realm: user.realm,
+        client: user.client,
+      })
+      .subscribe(() => {
+        expect(mockHttp.put).toHaveBeenCalledWith(
+          expect.stringContaining(
+            `${user.realm}/users/${user.sub}/execute-actions-email?client_id=${user.client}&redirect_uri=`,
+          ),
+          ['UPDATE_PASSWORD'],
+        );
+        done();
+      });
   });
 
-  it('should throw an error if the email does not exactly match', () => {
+  it('should throw an error if the email does not exactly match', (done) => {
     const email = 'example@mail';
     mockHttp.get.mockReturnValue(
       of({ data: [{ id: user.sub, email: email + '.com' }] }),
     );
 
-    return expect(
-      controller.forgotPassword({
+    controller
+      .forgotPassword({
         email,
         realm: user.realm,
         client: user.client,
-      }),
-    ).rejects.toThrow(BadRequestException);
+      })
+      .subscribe({
+        error: (err) => {
+          expect(err).toBeInstanceOf(BadRequestException);
+          done();
+        },
+      });
   });
 });

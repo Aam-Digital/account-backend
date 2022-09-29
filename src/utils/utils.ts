@@ -9,6 +9,9 @@ import { HttpException } from '@nestjs/common';
 export function prepareResult(): OperatorFunction<any, any> {
   return pipe(
     catchError((err) => {
+      if (err instanceof HttpException) {
+        throw err;
+      }
       throw new HttpException(
         err.response.data.errorMessage,
         err.response.status,

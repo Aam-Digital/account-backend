@@ -102,7 +102,7 @@ export class AccountController {
       'Looks for the user with the given email and sends a reset password email',
   })
   @Post('forgot-password')
-  async forgotPassword(@Body() { email, realm, client }: ForgotEmailReq) {
+  forgotPassword(@Body() { email, realm, client }: ForgotEmailReq) {
     return this.keycloak.findUsersBy(realm, { email }).pipe(
       map((users) => {
         // TODO only verified/valid accounts should allow a password reset?
