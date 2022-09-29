@@ -80,6 +80,14 @@ export class KeycloakService {
   }
 
   /**
+   * Get all available roles in this realm
+   * @param realm
+   */
+  getAllRoles(realm: string) {
+    return this.perform(this.http.get, `${realm}/roles`);
+  }
+
+  /**
    * Assigns a list of roles to a user.
    * @param realm
    * @param userId

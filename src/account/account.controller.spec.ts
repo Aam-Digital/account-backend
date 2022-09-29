@@ -156,4 +156,15 @@ describe('AccountController', () => {
         },
       });
   });
+
+  it('should call roles endpoint', (done) => {
+    mockHttp.get.mockReturnValue(of({ data: ['my-role'] }));
+    controller.getRoles({ user }).subscribe((roles) => {
+      expect(roles).toEqual(['my-role']);
+      expect(mockHttp.get).toHaveBeenCalledWith(
+        expect.stringContaining(`${user.realm}/roles`),
+      );
+      done();
+    });
+  });
 });

@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Get,
   Post,
   Put,
   Req,
@@ -97,7 +98,7 @@ export class AccountController {
   }
 
   @ApiOperation({
-    summary: 'Send password reset email',
+    summary: 'send password reset email',
     description:
       'Looks for the user with the given email and sends a reset password email',
   })
@@ -118,5 +119,17 @@ export class AccountController {
       ),
       prepareResult(),
     );
+  }
+
+  @ApiOperation({
+    summary: 'get all roles',
+    description: 'Returns all available roles in this realm',
+  })
+  @ApiBearerAuth()
+  @UseGuards(BearerGuard)
+  @Get('/roles')
+  getRoles(@Req() req) {
+    const user = req.user as User;
+    return this.keycloak.getAllRoles(user.realm);
   }
 }
