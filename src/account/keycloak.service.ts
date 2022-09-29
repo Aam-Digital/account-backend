@@ -23,7 +23,7 @@ export class KeycloakService {
   createUser(realm: string, username: string, email: string) {
     return this.perform(
       this.http.post,
-      `/${realm}/users`,
+      `${realm}/users`,
       new KeycloakUser(username, email),
     );
   }
@@ -40,19 +40,19 @@ export class KeycloakService {
 
   /**
    * Allows to find users by the given criteria.
-   * The keys in the `params` object have to be valid Keycloak user proeprties.
+   * The keys in the `params` object have to be valid Keycloak user properties.
    * Users where all values are matching are returned.
    * @param realm
    * @param params
    */
   findUsersBy(realm: string, params: { [key in string]: string }) {
-    return this.perform<KeycloakUser[]>(this.http.get, `/${realm}/users`, {
+    return this.perform<KeycloakUser[]>(this.http.get, `${realm}/users`, {
       params,
     });
   }
 
   /**
-   * Sends a email to the user with the given id, asking to perform the specified action.
+   * Sends an email to the user with the given id, asking to perform the specified action.
    * @param realm
    * @param client
    * @param userId
@@ -107,6 +107,8 @@ export class KeycloakService {
     ) => Observable<{ data: R }>,
   >(func: A, ...args: Parameters<typeof func>): Observable<R> {
     const url = `${this.keycloakUrl}/admin/realms/${args[0]}`;
-    return func(url, ...args.slice(1)).pipe(map((res) => res.data));
+    return func
+      .call(this.http, url, ...args.slice(1))
+      .pipe(map((res: any) => res.data));
   }
 }
