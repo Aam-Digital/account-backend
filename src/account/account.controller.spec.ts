@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AccountController } from './account.controller';
 import { HttpService } from '@nestjs/axios';
-import { User } from '../../auth/user.dto';
+import { User } from '../auth/user.dto';
 import { of } from 'rxjs';
 import { BadRequestException, UnauthorizedException } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';

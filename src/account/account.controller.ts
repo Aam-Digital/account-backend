@@ -9,7 +9,7 @@ import {
   UnauthorizedException,
   UseGuards,
 } from '@nestjs/common';
-import { BearerGuard } from '../../auth/bearer/bearer.guard';
+import { BearerGuard } from '../auth/bearer/bearer.guard';
 import { ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import {
   catchError,
@@ -23,7 +23,7 @@ import {
 import { HttpService } from '@nestjs/axios';
 import { ForgotEmailReq } from './forgot-email-req.dto';
 import { SetEmailReq } from './set-email-req.dto';
-import { User } from '../../auth/user.dto';
+import { User } from '../auth/user.dto';
 import { ConfigService } from '@nestjs/config';
 import { NewAccount } from './new-account.dto';
 import { KeycloakUser } from './keycloak-user';
