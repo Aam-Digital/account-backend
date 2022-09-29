@@ -5,14 +5,14 @@ import { KeycloakUser } from './keycloak-user';
 import { forkJoin, map, Observable } from 'rxjs';
 
 @Injectable()
-export class AccountService {
+export class KeycloakService {
   private readonly keycloakUrl: string;
   constructor(private http: HttpService, configService: ConfigService) {
     this.keycloakUrl = configService.get('KEYCLOAK_URL');
   }
 
   createUser(realm: string, username: string, email: string) {
-    return this.keycloakRequest(
+    return this.perform(
       this.http.post,
       `/${realm}/users`,
       new KeycloakUser(username, email),
@@ -20,23 +20,17 @@ export class AccountService {
   }
 
   updateUser(realm: string, userId: string, user: Partial<KeycloakUser>) {
-    return this.keycloakRequest(
-      this.http.put,
-      `${realm}/users/${userId}`,
-      user,
-    );
+    return this.perform(this.http.put, `${realm}/users/${userId}`, user);
   }
 
   findUserBy(realm: string, params: { [key in string]: string }) {
-    return this.keycloakRequest<{ id: string; email: string }[]>(
-      this.http.get,
-      `/${realm}/users`,
-      { params },
-    );
+    return this.perform<KeycloakUser[]>(this.http.get, `/${realm}/users`, {
+      params,
+    });
   }
 
   sendEmail(realm: string, client: string, userId: string, action: string) {
-    return this.keycloakRequest(
+    return this.perform(
       this.http.put,
       `${realm}/users/${userId}/execute-actions-email?client_id=${client}&redirect_uri=`,
       [action],
@@ -46,20 +40,20 @@ export class AccountService {
   getRoles(realm: string, roles: string[]) {
     return forkJoin(
       roles.map((role) =>
-        this.keycloakRequest(this.http.get, `${realm}/roles/${role}`),
+        this.perform(this.http.get, `${realm}/roles/${role}`),
       ),
     );
   }
 
   assignRoles(realm: string, userId: string, roles: any[]) {
-    return this.keycloakRequest(
+    return this.perform(
       this.http.post,
       `${realm}/users/${userId}/role-mappings/realm`,
       roles,
     );
   }
 
-  private keycloakRequest<
+  private perform<
     R,
     A extends (...args) => Observable<{ data: R }> = (
       ...args

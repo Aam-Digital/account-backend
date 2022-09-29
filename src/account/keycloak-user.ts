@@ -4,6 +4,10 @@
  */
 export class KeycloakUser {
   /**
+   * Unique identifier of a user.
+   */
+  id?: string;
+  /**
    * Other optional attributes of a user.
    */
   attributes: { [key in string]: string };
@@ -15,7 +19,7 @@ export class KeycloakUser {
   /**
    * Whether the user account is enabled.
    */
-  enabled: true;
+  enabled = true;
   /**
    * A list of credentials with which the user can log in.
    */

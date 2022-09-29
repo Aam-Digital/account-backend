@@ -2,7 +2,6 @@ import {
   BadRequestException,
   Body,
   Controller,
-  HttpException,
   Post,
   Put,
   Req,
@@ -11,19 +10,13 @@ import {
 } from '@nestjs/common';
 import { BearerGuard } from '../auth/bearer/bearer.guard';
 import { ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
-import {
-  catchError,
-  concatMap,
-  firstValueFrom,
-  map,
-  tap,
-  throwError,
-} from 'rxjs';
+import { concatMap, map, tap, throwError } from 'rxjs';
 import { ForgotEmailReq } from './forgot-email-req.dto';
 import { SetEmailReq } from './set-email-req.dto';
 import { User } from '../auth/user.dto';
 import { NewAccount } from './new-account.dto';
-import { AccountService } from './account.service';
+import { KeycloakService } from './keycloak.service';
+import { prepareResult } from '../utils/utils';
 
 /**
  * Endpoints to perform user account related tasks.
@@ -38,7 +31,7 @@ export class AccountController {
    */
   static readonly ACCOUNT_MANAGEMENT_ROLE = 'account_manager';
 
-  constructor(private accounts: AccountService) {}
+  constructor(private keycloak: KeycloakService) {}
 
   @ApiOperation({
     summary: 'create a new account',
@@ -61,22 +54,15 @@ export class AccountController {
       return throwError(() => new UnauthorizedException('missing permissions'));
     }
     let userId: string;
-    // create user
-    return this.accounts.createUser(realm, username, email).pipe(
-      concatMap(() => this.accounts.findUserBy(realm, { username })),
+    return this.keycloak.createUser(realm, username, email).pipe(
+      concatMap(() => this.keycloak.findUserBy(realm, { username })),
       tap((res) => (userId = res[0].id)),
       concatMap(() =>
-        this.accounts.sendEmail(realm, client, userId, 'VERIFY_EMAIL'),
+        this.keycloak.sendEmail(realm, client, userId, 'VERIFY_EMAIL'),
       ),
-      concatMap(() => this.accounts.getRoles(user.realm, roles)),
-      concatMap((res) => this.accounts.assignRoles(user.realm, userId, res)),
-      catchError((err) => {
-        throw new HttpException(
-          err.response.data.errorMessage,
-          err.response.status,
-        );
-      }),
-      map(() => ({ ok: true })),
+      concatMap(() => this.keycloak.getRoles(user.realm, roles)),
+      concatMap((res) => this.keycloak.assignRoles(user.realm, userId, res)),
+      prepareResult(),
     );
   }
 
@@ -90,23 +76,24 @@ export class AccountController {
   @UseGuards(BearerGuard)
   @ApiBearerAuth()
   @Put('set-email')
-  async setEmail(@Req() req, @Body() { email }: SetEmailReq) {
+  setEmail(@Req() req, @Body() { email }: SetEmailReq) {
     const user = req.user as User;
-    await firstValueFrom(
-      this.accounts.updateUser(user.realm, user.sub, {
+    return this.keycloak
+      .updateUser(user.realm, user.sub, {
         email: email,
         requiredActions: ['VERIFY_EMAIL'],
-      }),
-    );
-    await firstValueFrom(
-      this.accounts.sendEmail(
-        user.realm,
-        user.client,
-        user.sub,
-        'VERIFY_EMAIL',
-      ),
-    );
-    return { ok: true };
+      })
+      .pipe(
+        concatMap(() =>
+          this.keycloak.sendEmail(
+            user.realm,
+            user.client,
+            user.sub,
+            'VERIFY_EMAIL',
+          ),
+        ),
+        prepareResult(),
+      );
   }
 
   @ApiOperation({
@@ -116,17 +103,20 @@ export class AccountController {
   })
   @Post('forgot-password')
   async forgotPassword(@Body() { email, realm, client }: ForgotEmailReq) {
-    const usersWithEmail = await firstValueFrom(
-      this.accounts.findUserBy(realm, { email }),
+    return this.keycloak.findUserBy(realm, { email }).pipe(
+      map((users) => {
+        // TODO only verified/valid accounts should allow a password reset?
+        if (users.length !== 1 || users[0].email !== email) {
+          throw new BadRequestException(
+            `Could not find user with email: ${email}`,
+          );
+        }
+        return users[0];
+      }),
+      concatMap((user) =>
+        this.keycloak.sendEmail(realm, client, user.id, 'UPDATE_PASSWORD'),
+      ),
+      prepareResult(),
     );
-    // TODO only verified/valid accounts should allow a password reset?
-    if (usersWithEmail.length !== 1 || usersWithEmail[0].email !== email) {
-      throw new BadRequestException(`Could not find user with email: ${email}`);
-    }
-    const user = usersWithEmail[0];
-    await firstValueFrom(
-      this.accounts.sendEmail(realm, client, user.id, 'UPDATE_PASSWORD'),
-    );
-    return { ok: true };
   }
 }
