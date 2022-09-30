@@ -111,36 +111,30 @@ export class AccountController {
     @Param('userId') userId: string,
     @Body() updatedUser: KeycloakUser,
   ) {
-    const user = req.user as User;
-    const subscriptions: Observable<any>[] = [];
+    const { realm, client } = req.user as User;
+    const observables: Observable<any>[] = [];
     if (updatedUser.roles) {
       const newRoles = updatedUser.roles;
       delete updatedUser.roles;
-      subscriptions.push(
-        this.keycloak.getRolesOfUser(user.realm, userId).pipe(
-          concatMap((roles) =>
-            this.keycloak.deleteRoles(user.realm, userId, roles),
-          ),
-          concatMap(() =>
-            this.keycloak.assignRoles(user.realm, userId, newRoles),
-          ),
+      // delete existing roles and assign new ones
+      observables.push(
+        this.keycloak.getRolesOfUser(realm, userId).pipe(
+          concatMap((roles) => this.keycloak.deleteRoles(realm, userId, roles)),
+          concatMap(() => this.keycloak.assignRoles(realm, userId, newRoles)),
         ),
       );
     }
     if (updatedUser.email) {
+      // send verification email if email changed
       updatedUser.requiredActions = ['VERIFY_EMAIL'];
-      subscriptions.push(
-        this.keycloak.sendEmail(
-          user.realm,
-          user.client,
-          userId,
-          'VERIFY_EMAIL',
-        ),
+      observables.push(
+        this.keycloak.sendEmail(realm, client, userId, 'VERIFY_EMAIL'),
       );
     }
+    // first update the user object, then run other observables
     return concat(
-      this.keycloak.updateUser(user.realm, userId, updatedUser),
-      ...subscriptions,
+      this.keycloak.updateUser(realm, userId, updatedUser),
+      ...observables,
     ).pipe(prepareResult());
   }
 
