@@ -9,27 +9,27 @@ export class KeycloakUser {
   id?: string;
 
   @ApiProperty({ description: 'Unique name of the user' })
-  username: string;
+  username?: string;
 
   @ApiProperty({ description: 'Email of the user' })
-  email: string;
+  email?: string;
 
   @ApiProperty({ description: 'Other optional attributes of a user' })
-  attributes: { [key in string]: string };
+  attributes?: { [key in string]: string };
 
   @ApiProperty({
     description:
       'Actions the user need to perform on the account. E.g. "VERIFY_EMAIL", or "UPDATE_PASSWORD"',
   })
-  requiredActions: string[];
+  requiredActions?: string[];
 
   @ApiProperty({ description: 'Whether the user account is enabled' })
-  enabled = true;
+  enabled? = true;
 
   @ApiProperty({
     description: 'A list of credentials with which the user can log in',
   })
-  credentials: { [key in string]: any }[];
+  credentials?: { [key in string]: any }[];
 
   @ApiProperty({ description: 'Roles associated with a user' })
   roles?: any[];

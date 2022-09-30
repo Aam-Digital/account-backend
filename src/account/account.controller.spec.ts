@@ -3,9 +3,10 @@ import { AccountController } from './account.controller';
 import { HttpService } from '@nestjs/axios';
 import { User } from '../auth/user.dto';
 import { of } from 'rxjs';
-import { BadRequestException, UnauthorizedException } from '@nestjs/common';
+import { NotFoundException } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { KeycloakService } from './keycloak.service';
+import { KeycloakUser } from './keycloak-user.dto';
 
 describe('AccountController', () => {
   let controller: AccountController;
@@ -13,6 +14,7 @@ describe('AccountController', () => {
     put: jest.fn().mockReturnValue(of({ data: undefined })),
     get: jest.fn().mockReturnValue(of({ data: undefined })),
     post: jest.fn().mockReturnValue(of({ date: undefined })),
+    delete: jest.fn().mockReturnValue(of({ date: undefined })),
   };
   const user: User = {
     sub: 'user-id',
@@ -61,27 +63,63 @@ describe('AccountController', () => {
         // set roles
         expect(mockHttp.post).toHaveBeenCalledWith(
           expect.stringMatching(/\/user-id\/role-mappings\/realm$/),
-          ['my-role', 'my-role'],
+          roles,
         );
         done();
       });
   });
 
-  it('should not allow to create account if required role is missing', (done) => {
-    const otherUser = Object.assign({}, user);
-    otherUser['_couchdb.roles'] = [];
+  it('should return a user with the assigned roles', async () => {
+    const requestedUser: KeycloakUser = { username: 'my-user', id: 'user-id' };
+    const roles = ['user-role-1', 'user-role-2'];
+    mockHttp.get.mockImplementation((url: string) =>
+      of({ data: url.includes('role-mappings') ? roles : [requestedUser] }),
+    );
 
-    controller
-      .createAccount(
-        { user: otherUser },
-        { username: 'username', email: 'some-email', roles: [] },
-      )
-      .subscribe({
-        error: (err) => {
-          expect(err).toBeInstanceOf(UnauthorizedException);
-          done();
-        },
-      });
+    const res = await controller.getAccount({ user }, 'my-user');
+
+    expect(res).toEqual({ roles, ...requestedUser });
+    expect(mockHttp.get).toHaveBeenCalledWith(
+      expect.stringMatching(/\/users$/),
+      { params: { username: 'my-user', exact: true } },
+    );
+    expect(mockHttp.get).toHaveBeenCalledWith(
+      expect.stringMatching(/\/users\/user-id\/role-mappings\/realm$/),
+    );
+  });
+
+  it('should update the account with roles', (done) => {
+    mockHttp.get.mockReturnValue(of({ data: ['role1', 'role2'] }));
+    const update: KeycloakUser = {
+      email: 'new@email.de',
+      roles: ['newRole'],
+    };
+
+    controller.updateUser({ user }, 'my-user', update).subscribe(() => {
+      // send update with `roles` property
+      expect(mockHttp.put).toHaveBeenCalledWith(
+        expect.stringMatching(/\/users\/my-user$/),
+        { email: 'new@email.de', requiredActions: ['VERIFY_EMAIL'] },
+      );
+      // verification email is sent
+      expect(mockHttp.put).toHaveBeenCalledWith(
+        expect.stringContaining(
+          `execute-actions-email?client_id=${user.client}`,
+        ),
+        ['VERIFY_EMAIL'],
+      );
+      // old roles are deleted
+      expect(mockHttp.delete).toHaveBeenCalledWith(
+        expect.stringMatching(/users\/my-user\/role-mappings\/realm$/),
+        { data: ['role1', 'role2'] },
+      );
+      // new roles are set
+      expect(mockHttp.post).toHaveBeenCalledWith(
+        expect.stringMatching(/\/my-user\/role-mappings\/realm$/),
+        ['newRole'],
+      );
+      done();
+    });
   });
 
   it('should set the email and send a verification request', (done) => {
@@ -128,21 +166,18 @@ describe('AccountController', () => {
       });
   });
 
-  it('should throw an error if the email does not exactly match', (done) => {
-    const email = 'example@mail';
-    mockHttp.get.mockReturnValue(
-      of({ data: [{ id: user.sub, email: email + '.com' }] }),
-    );
+  it('should throw an error if multiple results are returned', (done) => {
+    mockHttp.get.mockReturnValue(of({ data: ['multiple', 'results'] }));
 
     controller
       .forgotPassword({
-        email,
+        email: 'some@email.de',
         realm: user.realm,
         client: user.client,
       })
       .subscribe({
         error: (err) => {
-          expect(err).toBeInstanceOf(BadRequestException);
+          expect(err).toBeInstanceOf(NotFoundException);
           done();
         },
       });
