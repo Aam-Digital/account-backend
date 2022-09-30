@@ -6,18 +6,19 @@ import {
   Post,
   Put,
   Req,
-  UnauthorizedException,
   UseGuards,
 } from '@nestjs/common';
 import { BearerGuard } from '../auth/bearer/bearer.guard';
 import { ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
-import { concatMap, map, tap, throwError } from 'rxjs';
+import { concatMap, map, tap } from 'rxjs';
 import { ForgotEmailReq } from './forgot-email-req.dto';
 import { SetEmailReq } from './set-email-req.dto';
 import { User } from '../auth/user.dto';
 import { NewAccount } from './new-account.dto';
 import { KeycloakService } from './keycloak.service';
 import { prepareResult } from '../utils/utils';
+import { RolesGuard } from '../auth/roles/roles.guard';
+import { Roles } from '../auth/roles/roles';
 
 /**
  * Endpoints to perform user account related tasks.
@@ -42,18 +43,12 @@ export class AccountController {
     `,
   })
   @ApiBearerAuth()
-  @UseGuards(BearerGuard)
+  @UseGuards(BearerGuard, RolesGuard)
+  @Roles(AccountController.ACCOUNT_MANAGEMENT_ROLE)
   @Post()
   createAccount(@Req() req, @Body() { username, email, roles }: NewAccount) {
     const user = req.user as User;
     const { realm, client } = user;
-    if (
-      !user['_couchdb.roles'].includes(
-        AccountController.ACCOUNT_MANAGEMENT_ROLE,
-      )
-    ) {
-      return throwError(() => new UnauthorizedException('missing permissions'));
-    }
     let userId: string;
     return this.keycloak.createUser(realm, username, email).pipe(
       concatMap(() => this.keycloak.findUsersBy(realm, { username })),
