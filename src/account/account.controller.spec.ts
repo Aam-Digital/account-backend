@@ -40,9 +40,7 @@ describe('AccountController', () => {
   });
 
   it('should create a new account with provided roles and send a verification mail', (done) => {
-    mockHttp.get.mockImplementation((url: string) =>
-      of({ data: url.includes('users') ? [{ id: 'user-id' }] : 'my-role' }),
-    );
+    mockHttp.get.mockReturnValue(of({ data: [{ id: 'user-id' }] }));
     const email = 'my@email.com';
     const username = 'my-name';
     const roles = ['user_app', 'admin_app'];
@@ -59,13 +57,6 @@ describe('AccountController', () => {
         expect(mockHttp.put).toHaveBeenCalledWith(
           expect.stringMatching(/\/user-id\/execute-actions-email/),
           ['VERIFY_EMAIL'],
-        );
-        // looked for roles
-        expect(mockHttp.get).toHaveBeenCalledWith(
-          expect.stringMatching(/\/roles\/user_app$/),
-        );
-        expect(mockHttp.get).toHaveBeenCalledWith(
-          expect.stringMatching(/\/roles\/admin_app$/),
         );
         // set roles
         expect(mockHttp.post).toHaveBeenCalledWith(

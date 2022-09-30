@@ -12,5 +12,5 @@ export class NewAccount {
     description:
       'Roles which should be assigned to the user. They have to exist already.',
   })
-  roles: string[];
+  roles: any[];
 }

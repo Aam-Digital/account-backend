@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import { KeycloakUser } from './keycloak-user';
-import { forkJoin, map, Observable } from 'rxjs';
+import { map, Observable } from 'rxjs';
 
 /**
  * This service provides endpoints for interacting with Keycloak.
@@ -63,19 +63,6 @@ export class KeycloakService {
       this.http.put,
       `${realm}/users/${userId}/execute-actions-email?client_id=${client}&redirect_uri=`,
       [action],
-    );
-  }
-
-  /**
-   * Returns the roles objects for a list of provided role names.
-   * @param realm
-   * @param roles a list of names of existing roles
-   */
-  getRoles(realm: string, roles: string[]) {
-    return forkJoin(
-      roles.map((role) =>
-        this.perform(this.http.get, `${realm}/roles/${role}`),
-      ),
     );
   }
 

@@ -37,13 +37,13 @@ export class AccountController {
   @ApiOperation({
     summary: 'create a new account',
     description: `Creates a new account with the provided username and email.
-      The default role 'user_app' is assigned to the user.
+      The roles need to match the format of the '/roles' endpoint
       A email is sent to the provided address to verify the account and set a password.
     `,
   })
   @ApiBearerAuth()
   @UseGuards(BearerGuard)
-  @Put()
+  @Post()
   createAccount(@Req() req, @Body() { username, email, roles }: NewAccount) {
     const user = req.user as User;
     const { realm, client } = user;
@@ -61,14 +61,14 @@ export class AccountController {
       concatMap(() =>
         this.keycloak.sendEmail(realm, client, userId, 'VERIFY_EMAIL'),
       ),
-      concatMap(() => this.keycloak.getRoles(user.realm, roles)),
-      concatMap((res) => this.keycloak.assignRoles(user.realm, userId, res)),
+      // TODO test empty array
+      concatMap(() => this.keycloak.assignRoles(user.realm, userId, roles)),
       prepareResult(),
     );
   }
 
   @ApiOperation({
-    summary: 'Set email of a user',
+    summary: 'set email of a user',
     description: `Set or update the email of a registered user. 
       The email is updated for the user associated with the Bearer token. 
       This sends a verification email.
@@ -79,6 +79,7 @@ export class AccountController {
   @Put('set-email')
   setEmail(@Req() req, @Body() { email }: SetEmailReq) {
     const user = req.user as User;
+    // TODO email is directly marked as verified
     return this.keycloak
       .updateUser(user.realm, user.sub, {
         email: email,
