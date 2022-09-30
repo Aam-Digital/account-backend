@@ -1,8 +1,8 @@
 import {
-  BadRequestException,
   Body,
   Controller,
   Get,
+  Param,
   Post,
   Put,
   Req,
@@ -10,7 +10,7 @@ import {
 } from '@nestjs/common';
 import { BearerGuard } from '../auth/bearer/bearer.guard';
 import { ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
-import { concatMap, map, tap } from 'rxjs';
+import { concatMap, tap } from 'rxjs';
 import { ForgotEmailReq } from './forgot-email-req.dto';
 import { SetEmailReq } from './set-email-req.dto';
 import { User } from '../auth/user.dto';
@@ -51,8 +51,8 @@ export class AccountController {
     const { realm, client } = user;
     let userId: string;
     return this.keycloak.createUser(realm, username, email).pipe(
-      concatMap(() => this.keycloak.findUsersBy(realm, { username })),
-      tap((res) => (userId = res[0].id)),
+      concatMap(() => this.keycloak.findUserBy(realm, { username })),
+      tap((res) => (userId = res.id)),
       concatMap(() =>
         this.keycloak.sendEmail(realm, client, userId, 'VERIFY_EMAIL'),
       ),
@@ -60,6 +60,19 @@ export class AccountController {
       concatMap(() => this.keycloak.assignRoles(user.realm, userId, roles)),
       prepareResult(),
     );
+  }
+
+  @ApiOperation({
+    summary: 'get user',
+    description: 'Returns the user with the given username',
+  })
+  @ApiBearerAuth()
+  @UseGuards(BearerGuard, RolesGuard)
+  @Roles(AccountController.ACCOUNT_MANAGEMENT_ROLE)
+  @Get('/:username')
+  getAccount(@Req() req, @Param('username') username: string) {
+    const user = req.user as User;
+    return this.keycloak.findUserBy(user.realm, { username });
   }
 
   @ApiOperation({
@@ -100,16 +113,8 @@ export class AccountController {
   })
   @Post('forgot-password')
   forgotPassword(@Body() { email, realm, client }: ForgotEmailReq) {
-    return this.keycloak.findUsersBy(realm, { email }).pipe(
-      map((users) => {
-        // TODO only verified/valid accounts should allow a password reset?
-        if (users.length !== 1 || users[0].email !== email) {
-          throw new BadRequestException(
-            `Could not find user with email: ${email}`,
-          );
-        }
-        return users[0];
-      }),
+    return this.keycloak.findUserBy(realm, { email }).pipe(
+      // TODO only verified/valid accounts should allow a password reset?
       concatMap((user) =>
         this.keycloak.sendEmail(realm, client, user.id, 'UPDATE_PASSWORD'),
       ),

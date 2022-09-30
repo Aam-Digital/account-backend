@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import { KeycloakUser } from './keycloak-user';
@@ -39,13 +39,33 @@ export class KeycloakService {
   }
 
   /**
+   * Looks for a single user that matches the criteria in params.
+   * The user is only returned if only a single user is matching the criteria exactly.
+   * If none or more than one user are matching throws a `NotFoundException`
+   * @param realm
+   * @param params see {@link https://www.keycloak.org/docs-api/19.0.2/rest-api/index.html#_getusers}
+   */
+  findUserBy(realm: string, params: { [key in string]: string | boolean }) {
+    params.exact = true;
+    return this.findUsersBy(realm, params).pipe(
+      map((res) => {
+        if (res.length !== 1) {
+          throw new NotFoundException(`Could not find user`);
+        } else {
+          return res[0];
+        }
+      }),
+    );
+  }
+
+  /**
    * Allows to find users by the given criteria.
    * The keys in the `params` object have to be valid Keycloak user properties.
    * Users where all values are matching are returned.
    * @param realm
    * @param params
    */
-  findUsersBy(realm: string, params: { [key in string]: string }) {
+  findUsersBy(realm: string, params: { [key in string]: string | boolean }) {
     return this.perform<KeycloakUser[]>(this.http.get, `${realm}/users`, {
       params,
     });
