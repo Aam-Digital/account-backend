@@ -121,6 +121,21 @@ export class KeycloakService {
   }
 
   /**
+   * Delete a list of roles from a user.
+   * @param realm
+   * @param userId
+   * @param roles should be objects equal to the ones provided by `getRoles()`
+   */
+  deleteRoles(realm: string, userId: string, roles: any[]) {
+    // TODO maybe filter out system-related roles?
+    return this.perform(
+      this.http.delete,
+      `${realm}/users/${userId}/role-mappings/realm`,
+      { data: roles },
+    );
+  }
+
+  /**
    * Simple helper function that automatically prepends the keycloak url
    * and maps the Axios result to the actual data object.
    * @param func e.g. `this.http.get`

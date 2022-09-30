@@ -114,10 +114,18 @@ export class AccountController {
     const user = req.user as User;
     const subscriptions: Observable<any>[] = [];
     if (updatedUser.roles) {
-      subscriptions.push(
-        this.keycloak.assignRoles(user.realm, userId, updatedUser.roles),
-      );
+      const newRoles = updatedUser.roles;
       delete updatedUser.roles;
+      subscriptions.push(
+        this.keycloak.getRolesOfUser(user.realm, userId).pipe(
+          concatMap((roles) =>
+            this.keycloak.deleteRoles(user.realm, userId, roles),
+          ),
+          concatMap(() =>
+            this.keycloak.assignRoles(user.realm, userId, newRoles),
+          ),
+        ),
+      );
     }
     if (updatedUser.email) {
       updatedUser.requiredActions = ['VERIFY_EMAIL'];
@@ -130,10 +138,10 @@ export class AccountController {
         ),
       );
     }
-    subscriptions.unshift(
+    return concat(
       this.keycloak.updateUser(user.realm, userId, updatedUser),
-    );
-    return concat(subscriptions).pipe(prepareResult());
+      ...subscriptions,
+    ).pipe(prepareResult());
   }
 
   @ApiOperation({
