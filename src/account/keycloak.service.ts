@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
-import { KeycloakUser } from './keycloak-user';
+import { KeycloakUser } from './keycloak-user.dto';
 import { map, Observable } from 'rxjs';
 
 /**
@@ -92,6 +92,18 @@ export class KeycloakService {
    */
   getAllRoles(realm: string) {
     return this.perform(this.http.get, `${realm}/roles`);
+  }
+
+  /**
+   * Returns all roles associated with a user
+   * @param realm
+   * @param userId
+   */
+  getRolesOfUser(realm: string, userId: string) {
+    return this.perform<any[]>(
+      this.http.get,
+      `${realm}/users/${userId}/role-mappings/realm`,
+    );
   }
 
   /**

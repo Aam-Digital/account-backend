@@ -10,7 +10,7 @@ import {
 } from '@nestjs/common';
 import { BearerGuard } from '../auth/bearer/bearer.guard';
 import { ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
-import { concatMap, tap } from 'rxjs';
+import { concatMap, firstValueFrom, tap } from 'rxjs';
 import { ForgotEmailReq } from './forgot-email-req.dto';
 import { SetEmailReq } from './set-email-req.dto';
 import { User } from '../auth/user.dto';
@@ -19,6 +19,7 @@ import { KeycloakService } from './keycloak.service';
 import { prepareResult } from '../utils/utils';
 import { RolesGuard } from '../auth/roles/roles.guard';
 import { Roles } from '../auth/roles/roles';
+import { KeycloakUser } from './keycloak-user.dto';
 
 /**
  * Endpoints to perform user account related tasks.
@@ -64,15 +65,25 @@ export class AccountController {
 
   @ApiOperation({
     summary: 'get user',
-    description: 'Returns the user with the given username',
+    description:
+      'Returns the user with the given username and the assigned roles.',
   })
   @ApiBearerAuth()
   @UseGuards(BearerGuard, RolesGuard)
   @Roles(AccountController.ACCOUNT_MANAGEMENT_ROLE)
   @Get('/:username')
-  getAccount(@Req() req, @Param('username') username: string) {
+  async getAccount(
+    @Req() req,
+    @Param('username') username: string,
+  ): Promise<KeycloakUser> {
     const user = req.user as User;
-    return this.keycloak.findUserBy(user.realm, { username });
+    const account = await firstValueFrom(
+      this.keycloak.findUserBy(user.realm, { username }),
+    );
+    const roles = await firstValueFrom(
+      this.keycloak.getRolesOfUser(user.realm, account.id),
+    );
+    return Object.assign(account, { roles });
   }
 
   @ApiOperation({
