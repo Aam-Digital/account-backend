@@ -10,7 +10,7 @@ import {
 } from '@nestjs/common';
 import { BearerGuard } from '../auth/bearer/bearer.guard';
 import { ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
-import { concatMap, firstValueFrom, tap } from 'rxjs';
+import { concat, concatMap, firstValueFrom, Observable, tap } from 'rxjs';
 import { ForgotEmailReq } from './forgot-email-req.dto';
 import { SetEmailReq } from './set-email-req.dto';
 import { User } from '../auth/user.dto';
@@ -35,6 +35,18 @@ export class AccountController {
   static readonly ACCOUNT_MANAGEMENT_ROLE = 'account_manager';
 
   constructor(private keycloak: KeycloakService) {}
+
+  @ApiOperation({
+    summary: 'get all roles',
+    description: 'Returns all available roles in this realm',
+  })
+  @ApiBearerAuth()
+  @UseGuards(BearerGuard)
+  @Get('/roles')
+  getRoles(@Req() req) {
+    const user = req.user as User;
+    return this.keycloak.getAllRoles(user.realm);
+  }
 
   @ApiOperation({
     summary: 'create a new account',
@@ -87,7 +99,45 @@ export class AccountController {
   }
 
   @ApiOperation({
-    summary: 'set email of a user',
+    summary: 'update user',
+    description: 'Partially update properties of a user.',
+  })
+  @ApiBearerAuth()
+  @UseGuards(BearerGuard, RolesGuard)
+  @Roles(AccountController.ACCOUNT_MANAGEMENT_ROLE)
+  @Put('/:userId')
+  updateUser(
+    @Req() req,
+    @Param('userId') userId: string,
+    @Body() updatedUser: KeycloakUser,
+  ) {
+    const user = req.user as User;
+    const subscriptions: Observable<any>[] = [];
+    if (updatedUser.roles) {
+      subscriptions.push(
+        this.keycloak.assignRoles(user.realm, userId, updatedUser.roles),
+      );
+      delete updatedUser.roles;
+    }
+    if (updatedUser.email) {
+      updatedUser.requiredActions = ['VERIFY_EMAIL'];
+      subscriptions.push(
+        this.keycloak.sendEmail(
+          user.realm,
+          user.client,
+          userId,
+          'VERIFY_EMAIL',
+        ),
+      );
+    }
+    subscriptions.unshift(
+      this.keycloak.updateUser(user.realm, userId, updatedUser),
+    );
+    return concat(subscriptions).pipe(prepareResult());
+  }
+
+  @ApiOperation({
+    summary: 'set email of user',
     description: `Set or update the email of a registered user. 
       The email is updated for the user associated with the Bearer token. 
       This sends a verification email.
@@ -131,17 +181,5 @@ export class AccountController {
       ),
       prepareResult(),
     );
-  }
-
-  @ApiOperation({
-    summary: 'get all roles',
-    description: 'Returns all available roles in this realm',
-  })
-  @ApiBearerAuth()
-  @UseGuards(BearerGuard)
-  @Get('/roles')
-  getRoles(@Req() req) {
-    const user = req.user as User;
-    return this.keycloak.getAllRoles(user.realm);
   }
 }
