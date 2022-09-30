@@ -106,7 +106,7 @@ export class AccountController {
   @UseGuards(BearerGuard, RolesGuard)
   @Roles(AccountController.ACCOUNT_MANAGEMENT_ROLE)
   @Put('/:userId')
-  updateUser(
+  updateAccount(
     @Req() req,
     @Param('userId') userId: string,
     @Body() updatedUser: KeycloakUser,

@@ -95,7 +95,7 @@ describe('AccountController', () => {
       roles: ['newRole'],
     };
 
-    controller.updateUser({ user }, 'my-user', update).subscribe(() => {
+    controller.updateAccount({ user }, 'my-user', update).subscribe(() => {
       // send update with `roles` property
       expect(mockHttp.put).toHaveBeenCalledWith(
         expect.stringMatching(/\/users\/my-user$/),
