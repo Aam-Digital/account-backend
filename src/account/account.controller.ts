@@ -37,6 +37,53 @@ export class AccountController {
   constructor(private keycloak: KeycloakService) {}
 
   @ApiOperation({
+    summary: 'set email of user',
+    description: `Set or update the email of a registered user. 
+      The email is updated for the user associated with the Bearer token. 
+      This sends a verification email.
+    `,
+  })
+  @UseGuards(BearerGuard)
+  @ApiBearerAuth()
+  @Put('set-email')
+  setEmail(@Req() req, @Body() { email }: SetEmailReq) {
+    const user = req.user as User;
+    // TODO email is directly marked as verified
+    return this.keycloak
+      .updateUser(user.realm, user.sub, {
+        email: email,
+        requiredActions: ['VERIFY_EMAIL'],
+      })
+      .pipe(
+        concatMap(() =>
+          this.keycloak.sendEmail(
+            user.realm,
+            user.client,
+            user.sub,
+            'VERIFY_EMAIL',
+          ),
+        ),
+        prepareResult(),
+      );
+  }
+
+  @ApiOperation({
+    summary: 'send password reset email',
+    description:
+      'Looks for the user with the given email and sends a reset password email',
+  })
+  @Post('forgot-password')
+  forgotPassword(@Body() { email, realm, client }: ForgotEmailReq) {
+    return this.keycloak.findUserBy(realm, { email }).pipe(
+      // TODO only verified/valid accounts should allow a password reset?
+      concatMap((user) =>
+        this.keycloak.sendEmail(realm, client, user.id, 'UPDATE_PASSWORD'),
+      ),
+      prepareResult(),
+    );
+  }
+
+  @ApiOperation({
     summary: 'get all roles',
     description: 'Returns all available roles in this realm',
   })
@@ -136,52 +183,5 @@ export class AccountController {
       this.keycloak.updateUser(realm, userId, updatedUser),
       ...observables,
     ]).pipe(prepareResult());
-  }
-
-  @ApiOperation({
-    summary: 'set email of user',
-    description: `Set or update the email of a registered user. 
-      The email is updated for the user associated with the Bearer token. 
-      This sends a verification email.
-    `,
-  })
-  @UseGuards(BearerGuard)
-  @ApiBearerAuth()
-  @Put('set-email')
-  setEmail(@Req() req, @Body() { email }: SetEmailReq) {
-    const user = req.user as User;
-    // TODO email is directly marked as verified
-    return this.keycloak
-      .updateUser(user.realm, user.sub, {
-        email: email,
-        requiredActions: ['VERIFY_EMAIL'],
-      })
-      .pipe(
-        concatMap(() =>
-          this.keycloak.sendEmail(
-            user.realm,
-            user.client,
-            user.sub,
-            'VERIFY_EMAIL',
-          ),
-        ),
-        prepareResult(),
-      );
-  }
-
-  @ApiOperation({
-    summary: 'send password reset email',
-    description:
-      'Looks for the user with the given email and sends a reset password email',
-  })
-  @Post('forgot-password')
-  forgotPassword(@Body() { email, realm, client }: ForgotEmailReq) {
-    return this.keycloak.findUserBy(realm, { email }).pipe(
-      // TODO only verified/valid accounts should allow a password reset?
-      concatMap((user) =>
-        this.keycloak.sendEmail(realm, client, user.id, 'UPDATE_PASSWORD'),
-      ),
-      prepareResult(),
-    );
   }
 }
