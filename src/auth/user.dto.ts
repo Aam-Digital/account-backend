@@ -15,4 +15,8 @@ export class User {
    * The name of the client through which the user is authenticated.
    */
   client: string;
+  /**
+   * Roles the user has.
+   */
+  ['_couchdb.roles']: string[];
 }
