@@ -37,108 +37,6 @@ export class AccountController {
   constructor(private keycloak: KeycloakService) {}
 
   @ApiOperation({
-    summary: 'get all roles',
-    description: 'Returns all available roles in this realm',
-  })
-  @ApiBearerAuth()
-  @UseGuards(BearerGuard)
-  @Get('/roles')
-  getRoles(@Req() req) {
-    const user = req.user as User;
-    return this.keycloak.getAllRoles(user.realm);
-  }
-
-  @ApiOperation({
-    summary: 'create a new account',
-    description: `Creates a new account with the provided username and email.
-      The roles need to match the format of the '/roles' endpoint
-      A email is sent to the provided address to verify the account and set a password.
-    `,
-  })
-  @ApiBearerAuth()
-  @UseGuards(BearerGuard, RolesGuard)
-  @Roles(AccountController.ACCOUNT_MANAGEMENT_ROLE)
-  @Post()
-  createAccount(@Req() req, @Body() { username, email, roles }: NewAccount) {
-    const user = req.user as User;
-    const { realm, client } = user;
-    let userId: string;
-    return this.keycloak.createUser(realm, username, email).pipe(
-      concatMap(() => this.keycloak.findUserBy(realm, { username })),
-      tap((res) => (userId = res.id)),
-      concatMap(() =>
-        this.keycloak.sendEmail(realm, client, userId, 'VERIFY_EMAIL'),
-      ),
-      // TODO test empty array
-      concatMap(() => this.keycloak.assignRoles(user.realm, userId, roles)),
-      prepareResult(),
-    );
-  }
-
-  @ApiOperation({
-    summary: 'get user',
-    description:
-      'Returns the user with the given username and the assigned roles.',
-  })
-  @ApiBearerAuth()
-  @UseGuards(BearerGuard, RolesGuard)
-  @Roles(AccountController.ACCOUNT_MANAGEMENT_ROLE)
-  @Get('/:username')
-  async getAccount(
-    @Req() req,
-    @Param('username') username: string,
-  ): Promise<KeycloakUser> {
-    const user = req.user as User;
-    const account = await firstValueFrom(
-      this.keycloak.findUserBy(user.realm, { username }),
-    );
-    const roles = await firstValueFrom(
-      this.keycloak.getRolesOfUser(user.realm, account.id),
-    );
-    return Object.assign(account, { roles });
-  }
-
-  @ApiOperation({
-    summary: 'update user',
-    description: 'Partially update properties of a user.',
-  })
-  @ApiBearerAuth()
-  @UseGuards(BearerGuard, RolesGuard)
-  @Roles(AccountController.ACCOUNT_MANAGEMENT_ROLE)
-  @Put('/:userId')
-  updateAccount(
-    @Req() req,
-    @Param('userId') userId: string,
-    @Body() updatedUser: KeycloakUser,
-  ) {
-    const { realm, client } = req.user as User;
-    const observables: Observable<any>[] = [];
-    if (updatedUser.roles) {
-      const newRoles = updatedUser.roles;
-      delete updatedUser.roles;
-      // delete existing roles and assign new ones
-      observables.push(
-        this.keycloak.getRolesOfUser(realm, userId).pipe(
-          concatMap((roles) => this.keycloak.deleteRoles(realm, userId, roles)),
-          concatMap(() => this.keycloak.assignRoles(realm, userId, newRoles)),
-        ),
-      );
-    }
-    if (updatedUser.email) {
-      // send verification email if email changed
-      updatedUser.requiredActions = ['VERIFY_EMAIL'];
-      observables.push(
-        this.keycloak.sendEmail(realm, client, userId, 'VERIFY_EMAIL'),
-      );
-    }
-    // first update the user object, then run other observables
-    return forkJoin([
-      this.keycloak.updateUser(realm, userId, updatedUser),
-      ...observables,
-    ]).pipe(prepareResult());
-  }
-
-  @ApiOperation({
     summary: 'set email of user',
     description: `Set or update the email of a registered user. 
       The email is updated for the user associated with the Bearer token. 
@@ -183,5 +81,107 @@ export class AccountController {
       ),
       prepareResult(),
     );
+  }
+
+  @ApiOperation({
+    summary: 'get all roles',
+    description: 'Returns all available roles in this realm',
+  })
+  @ApiBearerAuth()
+  @UseGuards(BearerGuard)
+  @Get('/roles')
+  getRoles(@Req() req) {
+    const user = req.user as User;
+    return this.keycloak.getAllRoles(user.realm);
+  }
+
+  @ApiOperation({
+    summary: 'create a new account',
+    description: `Creates a new account with the provided username and email.
+      The roles need to match the format of the '/roles' endpoint
+      A email is sent to the provided address to verify the account and set a password.
+    `,
+  })
+  @ApiBearerAuth()
+  @UseGuards(BearerGuard, RolesGuard)
+  @Roles(AccountController.ACCOUNT_MANAGEMENT_ROLE)
+  @Post()
+  createAccount(@Req() req, @Body() { username, email, roles }: NewAccount) {
+    const user = req.user as User;
+    const { realm, client } = user;
+    let userId: string;
+    return this.keycloak.createUser(realm, username, email).pipe(
+      concatMap(() => this.keycloak.findUserBy(realm, { username })),
+      tap((res) => (userId = res.id)),
+      concatMap(() =>
+        this.keycloak.sendEmail(realm, client, userId, 'VERIFY_EMAIL'),
+      ),
+      // TODO test empty array
+      concatMap(() => this.keycloak.assignRoles(user.realm, userId, roles)),
+      prepareResult(),
+    );
+  }
+
+  @ApiOperation({
+    summary: 'get account details',
+    description:
+      'Returns the user with the given username and the assigned roles.',
+  })
+  @ApiBearerAuth()
+  @UseGuards(BearerGuard, RolesGuard)
+  @Roles(AccountController.ACCOUNT_MANAGEMENT_ROLE)
+  @Get('/:username')
+  async getAccount(
+    @Req() req,
+    @Param('username') username: string,
+  ): Promise<KeycloakUser> {
+    const user = req.user as User;
+    const account = await firstValueFrom(
+      this.keycloak.findUserBy(user.realm, { username }),
+    );
+    const roles = await firstValueFrom(
+      this.keycloak.getRolesOfUser(user.realm, account.id),
+    );
+    return Object.assign(account, { roles });
+  }
+
+  @ApiOperation({
+    summary: 'update account details',
+    description: 'Partially update properties of a user.',
+  })
+  @ApiBearerAuth()
+  @UseGuards(BearerGuard, RolesGuard)
+  @Roles(AccountController.ACCOUNT_MANAGEMENT_ROLE)
+  @Put('/:userId')
+  updateAccount(
+    @Req() req,
+    @Param('userId') userId: string,
+    @Body() updatedUser: KeycloakUser,
+  ) {
+    const { realm, client } = req.user as User;
+    const observables: Observable<any>[] = [];
+    if (updatedUser.roles) {
+      const newRoles = updatedUser.roles;
+      delete updatedUser.roles;
+      // delete existing roles and assign new ones
+      observables.push(
+        this.keycloak.getRolesOfUser(realm, userId).pipe(
+          concatMap((roles) => this.keycloak.deleteRoles(realm, userId, roles)),
+          concatMap(() => this.keycloak.assignRoles(realm, userId, newRoles)),
+        ),
+      );
+    }
+    if (updatedUser.email) {
+      // send verification email if email changed
+      updatedUser.requiredActions = ['VERIFY_EMAIL'];
+      observables.push(
+        this.keycloak.sendEmail(realm, client, userId, 'VERIFY_EMAIL'),
+      );
+    }
+    // first update the user object, then run other observables
+    return forkJoin([
+      this.keycloak.updateUser(realm, userId, updatedUser),
+      ...observables,
+    ]).pipe(prepareResult());
   }
 }
