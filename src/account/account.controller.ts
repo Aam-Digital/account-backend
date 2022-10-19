@@ -30,7 +30,6 @@ import { KeycloakUser } from './keycloak-user.dto';
 export class AccountController {
   /**
    * Role that is required to create a new user.
-   * TODO add role to default realm setup or integrate with CASL rules
    */
   static readonly ACCOUNT_MANAGEMENT_ROLE = 'account_manager';
 
@@ -116,7 +115,6 @@ export class AccountController {
       concatMap(() =>
         this.keycloak.sendEmail(realm, client, userId, 'VERIFY_EMAIL'),
       ),
-      // TODO test empty array
       concatMap(() => this.keycloak.assignRoles(user.realm, userId, roles)),
       prepareResult(),
     );
