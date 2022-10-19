@@ -9,6 +9,13 @@ import { map, Observable } from 'rxjs';
  */
 @Injectable()
 export class KeycloakService {
+  // These roles are created by Keycloak automatically and should not be added or removed from users.
+  private static readonly KEYCLOAK_DEFAULT_ROLES = [
+    'default-roles',
+    'offline_access',
+    'uma_authorization',
+  ];
+
   private readonly keycloakUrl: string;
   constructor(private http: HttpService, configService: ConfigService) {
     this.keycloakUrl = configService.get('KEYCLOAK_URL');
@@ -91,7 +98,16 @@ export class KeycloakService {
    * @param realm
    */
   getAllRoles(realm: string) {
-    return this.perform(this.http.get, `${realm}/roles`);
+    return this.perform<{ name: string }[]>(
+      this.http.get,
+      `${realm}/roles`,
+    ).pipe(map((roles) => this.filterNonTechnicalRoles(roles)));
+  }
+
+  private filterNonTechnicalRoles(roles: { name: string }[]) {
+    return roles.filter(
+      (role) => !KeycloakService.KEYCLOAK_DEFAULT_ROLES.includes(role.name),
+    );
   }
 
   /**
@@ -100,10 +116,10 @@ export class KeycloakService {
    * @param userId
    */
   getRolesOfUser(realm: string, userId: string) {
-    return this.perform<any[]>(
+    return this.perform<{ name: string }[]>(
       this.http.get,
       `${realm}/users/${userId}/role-mappings/realm`,
-    );
+    ).pipe(map((roles) => this.filterNonTechnicalRoles(roles)));
   }
 
   /**
@@ -113,10 +129,11 @@ export class KeycloakService {
    * @param roles should be objects equal to the ones provided by `getRoles()`
    */
   assignRoles(realm: string, userId: string, roles: any[]) {
+    const appRoles = this.filterNonTechnicalRoles(roles);
     return this.perform(
       this.http.post,
       `${realm}/users/${userId}/role-mappings/realm`,
-      roles,
+      appRoles,
     );
   }
 
@@ -127,11 +144,11 @@ export class KeycloakService {
    * @param roles should be objects equal to the ones provided by `getRoles()`
    */
   deleteRoles(realm: string, userId: string, roles: any[]) {
-    // TODO maybe filter out system-related roles?
+    const appRoles = this.filterNonTechnicalRoles(roles);
     return this.perform(
       this.http.delete,
       `${realm}/users/${userId}/role-mappings/realm`,
-      { data: roles },
+      { data: appRoles },
     );
   }
 

@@ -19,9 +19,7 @@ export class AdminAuthService {
     this.keycloakUrl = configService.get('KEYCLOAK_URL');
     const username = configService.get('KEYCLOAK_ADMIN');
     const password = configService.get('KEYCLOAK_PASSWORD');
-    this.login(username, password).subscribe(() =>
-      console.log(`${username} logged in`),
-    );
+    this.login(username, password);
   }
 
   /**
