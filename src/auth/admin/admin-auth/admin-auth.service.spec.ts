@@ -65,14 +65,21 @@ describe('AdminAuthService', () => {
   });
 
   it('should retry request after logging in if the request failed with an unauthorized status code', async () => {
-    const config = { url: 'https://example.com' };
+    const config = {
+      url: 'https://example.com',
+      headers: { Authorization: 'old-token ' },
+    };
     const response = { status: HttpStatus.UNAUTHORIZED };
     jest.spyOn(service, 'login');
 
     await rejectedCallback({ config, response });
 
     expect(service.login).toHaveBeenCalled();
-    expect(mockHttpService.request).toHaveBeenCalledWith(config);
+    // old authorization token is deleted
+    expect(mockHttpService.request).toHaveBeenCalledWith({
+      url: config.url,
+      headers: {},
+    });
   });
 
   it('should just return the exception if request was to an openid-connect endpoint and failed', () => {
