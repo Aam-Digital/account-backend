@@ -27,7 +27,8 @@ export class AdminAuthService {
           // these errors should just be returned
           throw err;
         }
-        // retry request after logging in
+        // receive new access_token and retry request
+        delete err.config.headers.Authorization;
         return lastValueFrom(
           this.login(username, password).pipe(
             concatMap(() => this.http.request(err.config)),
@@ -39,7 +40,7 @@ export class AdminAuthService {
 
   /**
    * Login the admin with the given credentials.
-   * After successful login, the session is kept alive using refresh tokens.
+   * The received access_token is set as a default header for all outgoing http requests.
    * @param username of admin
    * @param password of admin
    * @returns OIDCTokenResponse
