@@ -10,7 +10,14 @@ import {
 } from '@nestjs/common';
 import { BearerGuard } from '../auth/bearer/bearer.guard';
 import { ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
-import { concatMap, concatWith, firstValueFrom, Observable, tap } from 'rxjs';
+import {
+  concatMap,
+  concatWith,
+  firstValueFrom,
+  last,
+  Observable,
+  tap,
+} from 'rxjs';
 import { ForgotEmailReq } from './forgot-email-req.dto';
 import { SetEmailReq } from './set-email-req.dto';
 import { User } from '../auth/user.dto';
@@ -179,6 +186,6 @@ export class AccountController {
     // first update the user object, then run other observables
     return this.keycloak
       .updateUser(realm, userId, updatedUser)
-      .pipe(concatWith(...observables), prepareResult());
+      .pipe(concatWith(...observables), last(), prepareResult());
   }
 }
