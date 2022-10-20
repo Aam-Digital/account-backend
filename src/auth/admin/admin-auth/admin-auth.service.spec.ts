@@ -1,21 +1,26 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AdminAuthService } from './admin-auth.service';
-import { firstValueFrom, of, throwError } from 'rxjs';
+import { firstValueFrom, of } from 'rxjs';
 import { HttpService } from '@nestjs/axios';
 import { OIDCTokenResponse } from '../oidc-token-response.dto';
-import { HttpException, UnauthorizedException } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { HttpStatus } from '@nestjs/common';
 
 describe('AdminAuthService', () => {
   let service: AdminAuthService;
   const tokenResponse: OIDCTokenResponse = {
     access_token: 'my-access-token',
-    refresh_token: 'my-refresh-token',
-    expires_in: 300,
   };
+  let rejectedCallback;
   const mockHttpService = {
     post: () => of({ data: tokenResponse }),
-    axiosRef: { defaults: { headers: { common: { Authorization: '' } } } },
+    request: jest.fn().mockReturnValue(of({ data: undefined })),
+    axiosRef: {
+      interceptors: {
+        response: { use: (ful, rej) => (rejectedCallback = rej) },
+      },
+      defaults: { headers: { common: { Authorization: '' } } },
+    },
   };
 
   beforeEach(async () => {
@@ -59,39 +64,28 @@ describe('AdminAuthService', () => {
     ).toEqual('Bearer ' + tokenResponse.access_token);
   });
 
-  it('should automatically use refresh token before access token expires', async () => {
-    jest
-      .spyOn(mockHttpService, 'post')
-      .mockReturnValue(of({ data: tokenResponse }));
+  it('should retry request after logging in if the request failed with an unauthorized status code', async () => {
+    const config = { url: 'https://example.com' };
+    const response = { status: HttpStatus.UNAUTHORIZED };
+    jest.spyOn(service, 'login');
 
-    await firstValueFrom(service.login('username', 'password'));
+    await rejectedCallback({ config, response });
 
-    expect(mockHttpService.post).toHaveBeenCalledTimes(1);
-
-    jest.advanceTimersByTime((tokenResponse.expires_in - 60) * 1000);
-
-    expect(mockHttpService.post).toHaveBeenCalledTimes(2);
-    expect(mockHttpService.post).toHaveBeenLastCalledWith(
-      expect.stringMatching(/protocol\/openid-connect\/token/),
-      expect.stringMatching(
-        /refresh_token=my-refresh-token&grant_type=refresh_token/,
-      ),
-    );
-
-    jest.advanceTimersByTime((tokenResponse.expires_in - 60) * 1000);
-
-    expect(mockHttpService.post).toHaveBeenCalledTimes(3);
+    expect(service.login).toHaveBeenCalled();
+    expect(mockHttpService.request).toHaveBeenCalledWith(config);
   });
 
-  it('should throw unauthorized exception if request fails', () => {
-    jest
-      .spyOn(mockHttpService, 'post')
-      .mockReturnValue(
-        throwError(() => new HttpException('fake-exception', 400)),
-      );
+  it('should just return the exception if request was to an openid-connect endpoint and failed', () => {
+    jest.spyOn(service, 'login');
+    const config = { url: 'https://example.com/openid-connect/token' };
+    const response = { status: HttpStatus.UNAUTHORIZED };
 
-    return expect(
-      firstValueFrom(service.login('username', 'password')),
-    ).rejects.toThrow(UnauthorizedException);
+    try {
+      rejectedCallback({ config, response });
+      fail();
+    } catch (e) {
+      expect(service.login).not.toHaveBeenCalled();
+      expect(e).toEqual({ config, response });
+    }
   });
 });
