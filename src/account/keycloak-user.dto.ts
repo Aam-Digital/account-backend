@@ -42,7 +42,7 @@ export class KeycloakUser {
     this.credentials = [
       {
         type: 'password',
-        value: 'tmpPass',
+        value: 'TmpPass1!',
         // this triggers the set new password flow
         temporary: true,
       },
