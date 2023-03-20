@@ -12,7 +12,7 @@ For more Aam Digital setup related documentation have a look at the [ndb-setup](
 
 A independent deployment can be done via docker
 
-> `docker run aamdigital/account-ms:latest`
+> `docker run aamdigitaltravis/account-ms:latest`
 
 or directly through npm
 
