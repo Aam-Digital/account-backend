@@ -25,7 +25,7 @@ jobs:
           file: ./build/Dockerfile
           builder: ${{ steps.buildx.outputs.name }}
           push: true
-          tags: aamdigitaltravis/account-ms:latest
+          tags: aamdigital/account-ms:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
