@@ -38,14 +38,7 @@ export class KeycloakUser {
     this.username = username;
     this.email = email;
     this.attributes = { exact_username: username };
-    this.requiredActions = ['VERIFY_EMAIL'];
-    this.credentials = [
-      {
-        type: 'password',
-        value: 'TmpPass1!',
-        // this triggers the set new password flow
-        temporary: true,
-      },
-    ];
+    this.requiredActions = ['VERIFY_EMAIL', 'UPDATE_PASSWORD'];
+    this.credentials = [];
   }
 }
