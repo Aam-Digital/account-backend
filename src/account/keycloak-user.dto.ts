@@ -34,9 +34,13 @@ export class KeycloakUser {
   @ApiProperty({ description: 'Roles associated with a user' })
   roles?: any[];
 
+  @ApiProperty({ description: 'Whether the email has been verified' })
+  emailVerified?: boolean;
+
   constructor(username: string, email: string) {
     this.username = username;
     this.email = email;
+    this.emailVerified = false;
     this.attributes = { exact_username: username };
     this.requiredActions = ['VERIFY_EMAIL', 'UPDATE_PASSWORD'];
     this.credentials = [];

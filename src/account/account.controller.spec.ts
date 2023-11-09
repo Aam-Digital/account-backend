@@ -130,7 +130,7 @@ describe('AccountController', () => {
           expect.stringContaining(
             `admin/realms/${user.realm}/users/${user.sub}`,
           ),
-          { email, requiredActions: ['VERIFY_EMAIL'] },
+          { email, emailVerified: false, requiredActions: ['VERIFY_EMAIL'] },
         ],
         [
           expect.stringContaining(
