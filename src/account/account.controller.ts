@@ -58,6 +58,7 @@ export class AccountController {
     return this.keycloak
       .updateUser(user.realm, user.sub, {
         email: email,
+        emailVerified: false,
         requiredActions: ['VERIFY_EMAIL'],
       })
       .pipe(
