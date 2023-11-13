@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  Headers,
   Param,
   Post,
   Put,
@@ -9,7 +10,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { BearerGuard } from '../auth/bearer/bearer.guard';
-import { ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiHeader, ApiOperation } from '@nestjs/swagger';
 import {
   concatMap,
   concatWith,
@@ -51,8 +52,13 @@ export class AccountController {
   })
   @UseGuards(BearerGuard)
   @ApiBearerAuth()
+  @ApiHeader({ name: 'Accept-Language', required: false })
   @Put('set-email')
-  setEmail(@Req() req, @Body() { email }: SetEmailReq) {
+  setEmail(
+    @Req() req,
+    @Body() { email }: SetEmailReq,
+    @Headers('Accept-Language') lang?: string,
+  ) {
     const user = req.user as User;
     // TODO email is directly marked as verified
     return this.keycloak
@@ -68,6 +74,7 @@ export class AccountController {
             user.client,
             user.sub,
             'VERIFY_EMAIL',
+            lang,
           ),
         ),
         prepareResult(),
@@ -79,12 +86,22 @@ export class AccountController {
     description:
       'Looks for the user with the given email and sends a reset password email',
   })
+  @ApiHeader({ name: 'Accept-Language', required: false })
   @Post('forgot-password')
-  forgotPassword(@Body() { email, realm, client }: ForgotEmailReq) {
+  forgotPassword(
+    @Body() { email, realm, client }: ForgotEmailReq,
+    @Headers('Accept-Language') lang?: string,
+  ) {
     return this.keycloak.findUserBy(realm, { email }).pipe(
       // TODO only verified/valid accounts should allow a password reset?
       concatMap((user) =>
-        this.keycloak.sendEmail(realm, client, user.id, 'UPDATE_PASSWORD'),
+        this.keycloak.sendEmail(
+          realm,
+          client,
+          user.id,
+          'UPDATE_PASSWORD',
+          lang,
+        ),
       ),
       prepareResult(),
     );
@@ -110,10 +127,15 @@ export class AccountController {
     `,
   })
   @ApiBearerAuth()
+  @ApiHeader({ name: 'Accept-Language', required: false })
   @UseGuards(BearerGuard, RolesGuard)
   @Roles(AccountController.ACCOUNT_MANAGEMENT_ROLE)
   @Post()
-  createAccount(@Req() req, @Body() { username, email, roles }: NewAccount) {
+  createAccount(
+    @Req() req,
+    @Body() { username, email, roles }: NewAccount,
+    @Headers('Accept-Language') lang?: string,
+  ) {
     const user = req.user as User;
     const { realm, client } = user;
     let userId: string;
@@ -121,7 +143,7 @@ export class AccountController {
       concatMap(() => this.keycloak.findUserBy(realm, { username })),
       tap((res) => (userId = res.id)),
       concatMap(() =>
-        this.keycloak.sendEmail(realm, client, userId, 'VERIFY_EMAIL'),
+        this.keycloak.sendEmail(realm, client, userId, 'VERIFY_EMAIL', lang),
       ),
       concatMap(() => this.keycloak.assignRoles(user.realm, userId, roles)),
       prepareResult(),
@@ -156,6 +178,7 @@ export class AccountController {
     description: 'Partially update properties of a user.',
   })
   @ApiBearerAuth()
+  @ApiHeader({ name: 'Accept-Language', required: false })
   @UseGuards(BearerGuard, RolesGuard)
   @Roles(AccountController.ACCOUNT_MANAGEMENT_ROLE)
   @Put('/:userId')
@@ -163,6 +186,7 @@ export class AccountController {
     @Req() req,
     @Param('userId') userId: string,
     @Body() updatedUser: KeycloakUser,
+    @Headers('Accept-Language') lang?: string,
   ) {
     const { realm, client } = req.user as User;
     const observables: Observable<any>[] = [];
@@ -181,7 +205,7 @@ export class AccountController {
       // send verification email if email changed
       updatedUser.requiredActions = ['VERIFY_EMAIL'];
       observables.push(
-        this.keycloak.sendEmail(realm, client, userId, 'VERIFY_EMAIL'),
+        this.keycloak.sendEmail(realm, client, userId, 'VERIFY_EMAIL', lang),
       );
     }
     // first update the user object, then run other observables

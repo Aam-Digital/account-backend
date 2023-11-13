@@ -84,12 +84,20 @@ export class KeycloakService {
    * @param client
    * @param userId
    * @param action e.g. "UPDATE_PASSWORD", "VERIFY_EMAIL"
+   * @param lang
    */
-  sendEmail(realm: string, client: string, userId: string, action: string) {
+  sendEmail(
+    realm: string,
+    client: string,
+    userId: string,
+    action: string,
+    lang?: string,
+  ) {
     return this.perform(
       this.http.put,
       `${realm}/users/${userId}/execute-actions-email?client_id=${client}&redirect_uri=`,
       [action],
+      { headers: { 'Accept-Language': lang } },
     );
   }
 
