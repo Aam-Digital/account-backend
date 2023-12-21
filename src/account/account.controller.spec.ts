@@ -59,6 +59,7 @@ describe('AccountController', () => {
         expect(mockHttp.put).toHaveBeenCalledWith(
           expect.stringMatching(/\/user-id\/execute-actions-email/),
           ['VERIFY_EMAIL'],
+          expect.anything(),
         );
         // set roles
         expect(mockHttp.post).toHaveBeenCalledWith(
@@ -107,6 +108,7 @@ describe('AccountController', () => {
           `execute-actions-email?client_id=${user.client}`,
         ),
         ['VERIFY_EMAIL'],
+        expect.anything(),
       );
       // old roles are deleted
       expect(mockHttp.delete).toHaveBeenCalledWith(
@@ -137,6 +139,7 @@ describe('AccountController', () => {
             `execute-actions-email?client_id=${user.client}`,
           ),
           ['VERIFY_EMAIL'],
+          expect.anything(),
         ],
       ]);
       done();
@@ -161,6 +164,7 @@ describe('AccountController', () => {
             `${user.realm}/users/${user.sub}/execute-actions-email?client_id=${user.client}&redirect_uri=`,
           ),
           ['UPDATE_PASSWORD'],
+          expect.anything(),
         );
         done();
       });
