@@ -142,7 +142,9 @@ export class AccountController {
   ): Promise<KeycloakUser> {
     const user = req.user as User;
     const account = await firstValueFrom(
-      this.keycloak.findUserBy(user.realm, { username }),
+      this.keycloak.findUserBy(user.realm, {
+        q: `exact_username:${username}`,
+      }),
     );
     const roles = await firstValueFrom(
       this.keycloak.getRolesOfUser(user.realm, account.id),
