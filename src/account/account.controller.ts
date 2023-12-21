@@ -54,7 +54,6 @@ export class AccountController {
   @Put('set-email')
   setEmail(@Req() req, @Body() { email }: SetEmailReq) {
     const user = req.user as User;
-    // TODO email is directly marked as verified
     return this.keycloak
       .updateUser(user.realm, user.sub, {
         email: email,
