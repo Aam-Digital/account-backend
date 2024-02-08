@@ -82,7 +82,7 @@ describe('AccountController', () => {
     expect(res).toEqual({ roles, ...requestedUser });
     expect(mockHttp.get).toHaveBeenCalledWith(
       expect.stringMatching(/\/users$/),
-      { params: { username: 'my-user', exact: true } },
+      { params: { q: 'exact_username:my-user', exact: true } },
     );
     expect(mockHttp.get).toHaveBeenCalledWith(
       expect.stringMatching(/\/users\/user-id\/role-mappings\/realm$/),
