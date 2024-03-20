@@ -1,9 +1,14 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import { SentryService } from '@ntegral/nestjs-sentry';
+import { ConfigService } from '@nestjs/config';
+import { AppConfiguration } from './config/configuration';
+import { configureSentry } from './sentry.configuration';
 
 async function bootstrap() {
+  // load ConfigService instance to access .env and app.yaml values
+  const configService = new ConfigService(AppConfiguration());
+
   const app = await NestFactory.create(AppModule);
 
   app.enableCors({ origin: process.env.CORS });
@@ -20,8 +25,8 @@ async function bootstrap() {
     swaggerOptions: { persistAuthorization: true },
   });
 
-  app.useLogger(SentryService.SentryServiceInstance());
+  configureSentry(app, configService);
 
-  await app.listen(3000);
+  await app.listen(process.env.PORT || 3000);
 }
 bootstrap();
