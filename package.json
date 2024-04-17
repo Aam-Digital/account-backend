@@ -28,7 +28,7 @@
     "@nestjs/passport": "^9.0.0",
     "@nestjs/platform-express": "^9.0.0",
     "@nestjs/swagger": "^6.0.5",
-    "@sentry/node": "^7.102.1",
+    "@sentry/node": "^7.108.0",
     "@sentry/tracing": "^7.102.1",
     "js-yaml": "4.1.0",
     "jwt-decode": "^3.1.2",
