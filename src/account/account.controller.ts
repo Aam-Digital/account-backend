@@ -45,8 +45,8 @@ export class AccountController {
 
   @ApiOperation({
     summary: 'set email of user',
-    description: `Set or update the email of a registered user. 
-      The email is updated for the user associated with the Bearer token. 
+    description: `Set or update the email of a registered user.
+      The email is updated for the user associated with the Bearer token.
       This sends a verification email.
     `,
   })
