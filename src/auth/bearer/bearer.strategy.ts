@@ -2,9 +2,9 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { Strategy } from 'passport-http-bearer';
 import { HttpService } from '@nestjs/axios';
-import jwtDecode from 'jwt-decode';
 import { catchError, firstValueFrom, map } from 'rxjs';
 import { User } from '../user.dto';
+import { jwtDecode } from "jwt-decode";
 
 /**
  * A strategy that receives the bearer token and verifies it against Keycloak.
@@ -21,7 +21,7 @@ export class BearerStrategy extends PassportStrategy(Strategy) {
    * @param token bearer token to be verified
    * @returns the user that this bearer token belongs to
    */
-  validate(token): Promise<User> {
+  validate(token: string): Promise<User> {
     const { iss, azp } = jwtDecode<{ iss: string; azp: string }>(token);
     const realm = iss.match(/realms\/(.+)$/)[1];
     const url = iss + '/protocol/openid-connect/userinfo';
