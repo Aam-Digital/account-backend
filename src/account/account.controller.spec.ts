@@ -70,6 +70,21 @@ describe('AccountController', () => {
       });
   });
 
+  it('should delete a user account', (done) => {
+    mockHttp.delete.mockReturnValue(of(""));
+    const id = 'my-id';
+
+    controller
+      .deleteAccount({ user }, id )
+      .subscribe(() => {
+        // delete user
+        expect(mockHttp.delete).toHaveBeenCalledWith(
+          expect.stringContaining("/ndb-dev/users/my-id"),
+        );
+        done();
+      });
+  });
+
   it('should return a user with the assigned roles', async () => {
     const requestedUser: KeycloakUser = { username: 'my-user', id: 'user-id' };
     const roles = ['user-role-1', 'user-role-2'];
