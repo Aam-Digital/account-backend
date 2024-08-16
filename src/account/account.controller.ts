@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Headers,
   Param,
@@ -12,13 +13,16 @@ import {
 import { BearerGuard } from '../auth/bearer/bearer.guard';
 import { ApiBearerAuth, ApiHeader, ApiOperation } from '@nestjs/swagger';
 import {
+  catchError,
   concatMap,
   concatWith,
   firstValueFrom,
   last,
   Observable,
-  tap,
-} from 'rxjs';
+  of,
+  switchMap,
+  tap
+} from "rxjs";
 import { ForgotEmailReq } from './forgot-email-req.dto';
 import { SetEmailReq } from './set-email-req.dto';
 import { User } from '../auth/user.dto';
@@ -147,6 +151,39 @@ export class AccountController {
       concatMap(() => this.keycloak.assignRoles(user.realm, userId, roles)),
       prepareResult(),
     );
+  }
+
+  @ApiOperation({
+    summary: 'delete an user account',
+    description:
+      'Looks if an account with given id exist in realm and deletes it',
+  })
+  @ApiBearerAuth()
+  @ApiHeader({ name: 'Accept-Language', required: false })
+  @UseGuards(BearerGuard, RolesGuard)
+  @Roles(AccountController.ACCOUNT_MANAGEMENT_ROLE)
+  @Delete('/:userId')
+  deleteAccount(
+    @Req() req,
+    @Param('userId') userId: string,
+  ) {
+    const user = req.user as User;
+
+    return this.keycloak.deleteUser(
+      user.realm,
+      userId
+    ).pipe(
+      switchMap(() => {
+        return of({
+          userDeleted: true
+        });
+      }),
+      catchError(() => {
+        return of({
+          userDeleted: false
+        });
+      }),
+    )
   }
 
   @ApiOperation({

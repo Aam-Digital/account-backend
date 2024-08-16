@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { AccountController } from './account.controller';
 import { HttpService } from '@nestjs/axios';
 import { User } from '../auth/user.dto';
-import { of } from 'rxjs';
+import { of, throwError } from "rxjs";
 import { NotFoundException } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { KeycloakService } from './keycloak.service';
@@ -10,12 +10,9 @@ import { KeycloakUser } from './keycloak-user.dto';
 
 describe('AccountController', () => {
   let controller: AccountController;
-  const mockHttp = {
-    put: jest.fn().mockReturnValue(of({ data: undefined })),
-    get: jest.fn().mockReturnValue(of({ data: undefined })),
-    post: jest.fn().mockReturnValue(of({ date: undefined })),
-    delete: jest.fn().mockReturnValue(of({ date: undefined })),
-  };
+
+  let mockHttp;
+
   const user: User = {
     sub: 'user-id',
     realm: 'ndb-dev',
@@ -24,6 +21,15 @@ describe('AccountController', () => {
   };
 
   beforeEach(async () => {
+    mockHttp = {
+      put: jest.fn().mockReturnValue(of({ data: undefined })),
+      get: jest.fn().mockReturnValue(of({ data: undefined })),
+      post: jest.fn().mockReturnValue(of({ date: undefined })),
+      delete: jest.fn().mockReturnValue(of({ date: undefined })),
+    }
+
+    jest.clearAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       imports: [ConfigModule],
       controllers: [AccountController],
@@ -34,7 +40,6 @@ describe('AccountController', () => {
     }).compile();
 
     controller = module.get<AccountController>(AccountController);
-    jest.clearAllMocks();
   });
 
   it('should be defined', () => {
@@ -68,6 +73,43 @@ describe('AccountController', () => {
         );
         done();
       });
+  });
+
+  it('should delete return 200 with bodyDeleted true', (done) => {
+    mockHttp.delete.mockReturnValue(of(""));
+    const id = 'my-id';
+
+    controller
+      .deleteAccount({ user }, id )
+      .subscribe({
+        next: (value) => {
+          expect(value.userDeleted).toBeTruthy()
+          // delete user
+          expect(mockHttp.delete).toHaveBeenCalledWith(
+            expect.stringContaining("/ndb-dev/users/my-id"),
+          );
+          done()
+        }
+      });
+  });
+
+  it('should delete return 200 with bodyDeleted false', (done) => {
+    mockHttp.delete.mockReturnValue(throwError(() => new Error()));
+    const id = 'my-id';
+
+    controller
+      .deleteAccount({ user }, id )
+      .subscribe({
+        next: (value) => {
+          expect(value.userDeleted).toBeFalsy()
+          // delete user
+          expect(mockHttp.delete).toHaveBeenCalledWith(
+            expect.stringContaining("/ndb-dev/users/my-id"),
+          );
+          done()
+        }
+      })
+    ;
   });
 
   it('should return a user with the assigned roles', async () => {

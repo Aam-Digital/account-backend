@@ -2,7 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import { KeycloakUser } from './keycloak-user.dto';
-import { map, Observable } from 'rxjs';
+import { catchError, map, Observable, of } from 'rxjs';
 
 /**
  * This service provides endpoints for interacting with Keycloak.
@@ -17,6 +17,7 @@ export class KeycloakService {
   ];
 
   private readonly keycloakUrl: string;
+
   constructor(private http: HttpService, configService: ConfigService) {
     this.keycloakUrl = configService.get('KEYCLOAK_URL');
   }
@@ -33,6 +34,18 @@ export class KeycloakService {
       `${realm}/users`,
       new KeycloakUser(username, email),
     );
+  }
+
+  /**
+   * Delete a user in the realm with the given id
+   * @param realm
+   * @param id
+   */
+  deleteUser(realm: string, id: string) {
+    return this.perform(
+      this.http.delete,
+      `${realm}/users/${id}`,
+    )
   }
 
   /**
