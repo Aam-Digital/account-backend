@@ -13,13 +13,16 @@ import {
 import { BearerGuard } from '../auth/bearer/bearer.guard';
 import { ApiBearerAuth, ApiHeader, ApiOperation } from '@nestjs/swagger';
 import {
+  catchError,
   concatMap,
   concatWith,
   firstValueFrom,
   last,
   Observable,
-  tap,
-} from 'rxjs';
+  of,
+  switchMap,
+  tap
+} from "rxjs";
 import { ForgotEmailReq } from './forgot-email-req.dto';
 import { SetEmailReq } from './set-email-req.dto';
 import { User } from '../auth/user.dto';
@@ -168,7 +171,18 @@ export class AccountController {
 
     return this.keycloak.deleteUser(
       user.realm,
-      userId,
+      userId
+    ).pipe(
+      switchMap(() => {
+        return of({
+          userDeleted: true
+        });
+      }),
+      catchError(() => {
+        return of({
+          userDeleted: false
+        });
+      }),
     )
   }
 

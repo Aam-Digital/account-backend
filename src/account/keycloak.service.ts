@@ -45,11 +45,7 @@ export class KeycloakService {
     return this.perform(
       this.http.delete,
       `${realm}/users/${id}`,
-    ).pipe(
-      catchError(() => {
-        return of("")
-      }),
-    );
+    )
   }
 
   /**
