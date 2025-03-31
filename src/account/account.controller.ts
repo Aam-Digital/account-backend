@@ -23,8 +23,6 @@ import {
   switchMap,
   tap
 } from "rxjs";
-import { ForgotEmailReq } from './forgot-email-req.dto';
-import { SetEmailReq } from './set-email-req.dto';
 import { User } from '../auth/user.dto';
 import { NewAccount } from './new-account.dto';
 import { KeycloakService } from './keycloak.service';
@@ -46,69 +44,6 @@ export class AccountController {
   static readonly ACCOUNT_MANAGEMENT_ROLE = 'account_manager';
 
   constructor(private keycloak: KeycloakService) {}
-
-  @ApiOperation({
-    summary: 'set email of user',
-    description: `Set or update the email of a registered user.
-      The email is updated for the user associated with the Bearer token.
-      This sends a verification email.
-    `,
-  })
-  @UseGuards(BearerGuard)
-  @ApiBearerAuth()
-  @ApiHeader({ name: 'Accept-Language', required: false })
-  @Put('set-email')
-  setEmail(
-    @Req() req,
-    @Body() { email }: SetEmailReq,
-    @Headers('Accept-Language') lang?: string,
-  ) {
-    const user = req.user as User;
-    return this.keycloak
-      .updateUser(user.realm, user.sub, {
-        email: email,
-        emailVerified: false,
-        requiredActions: ['VERIFY_EMAIL'],
-      })
-      .pipe(
-        concatMap(() =>
-          this.keycloak.sendEmail(
-            user.realm,
-            user.client,
-            user.sub,
-            'VERIFY_EMAIL',
-            lang,
-          ),
-        ),
-        prepareResult(),
-      );
-  }
-
-  @ApiOperation({
-    summary: 'send password reset email',
-    description:
-      'Looks for the user with the given email and sends a reset password email',
-  })
-  @ApiHeader({ name: 'Accept-Language', required: false })
-  @Post('forgot-password')
-  forgotPassword(
-    @Body() { email, realm, client }: ForgotEmailReq,
-    @Headers('Accept-Language') lang?: string,
-  ) {
-    return this.keycloak.findUserBy(realm, { email }).pipe(
-      // TODO only verified/valid accounts should allow a password reset?
-      concatMap((user) =>
-        this.keycloak.sendEmail(
-          realm,
-          client,
-          user.id,
-          'UPDATE_PASSWORD',
-          lang,
-        ),
-      ),
-      prepareResult(),
-    );
-  }
 
   @ApiOperation({
     summary: 'get all roles',
